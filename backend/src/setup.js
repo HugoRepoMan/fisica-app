@@ -2,7 +2,9 @@ const db = require('./config/db');
 
 async function setup() {
     try {
-        // Tabla Usuarios 
+        console.log("🔄 Actualizando arquitectura del Backend...");
+
+        // 1. Usuarios: Agregamos XP_TOTAL y XP_SIGUIENTE_NIVEL
         await db.query(`
             CREATE TABLE IF NOT EXISTS usuarios (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -10,35 +12,72 @@ async function setup() {
                 email VARCHAR(100) NOT NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
                 nivel INT DEFAULT 1,
+                xp_actual INT DEFAULT 0,     -- Ej: 450
+                xp_meta INT DEFAULT 750,     -- Ej: 750 para pasar al nivel 2
                 fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        // 2. Tabla Ejercicios 
+
+        // 2. Modulos (Las tarjetas grandes: MRU, Caída Libre, etc.)
         await db.query(`
-            CREATE TABLE IF NOT EXISTS ejercicios (
+            CREATE TABLE IF NOT EXISTS modulos (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                titulo VARCHAR(100),
-                pregunta TEXT NOT NULL,
-                opcion_a VARCHAR(100),
-                opcion_b VARCHAR(100),
-                opcion_c VARCHAR(100),
-                respuesta_correcta CHAR(1), -- 'a', 'b' o 'c'
-                nivel INT DEFAULT 1
+                titulo VARCHAR(100) NOT NULL,    -- Ej: "Movimiento Rectilíneo Uniforme"
+                subtitulo VARCHAR(150),          -- Ej: "Velocidad constante y ecuaciones"
+                icono VARCHAR(50),               -- Ej: "check", "lock", "book"
+                orden INT NOT NULL,              -- 1, 2, 3 (Para saber cuál va primero)
+                xp_recompensa INT DEFAULT 50     -- Cuánto XP gana al terminarlo
             )
         `);
-        // Insertar un ejercicio de prueba 
-        const [rows] = await db.query('SELECT * FROM ejercicios');
-        if (rows.length === 0) {
+
+        // 3. Progreso (La memoria de qué ha completado el usuario)
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS progreso_usuario (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                modulo_id INT,
+                completado BOOLEAN DEFAULT FALSE,
+                fecha_completado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES usuarios(id),
+                FOREIGN KEY (modulo_id) REFERENCES modulos(id)
+            )
+        `);
+
+        // 4. Contenido Lecciones (El texto y fórmulas dentro de cada módulo)
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS lecciones (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                modulo_id INT,
+                titulo VARCHAR(100),            -- Ej: "¿Qué es el MRUV?"
+                contenido_texto TEXT,           -- Explicación teórica
+                formula_latex VARCHAR(255),     -- Ej: "v = v_0 + a \cdot t"
+                FOREIGN KEY (modulo_id) REFERENCES modulos(id)
+            )
+        `);
+
+        // --- DATOS DE PRUEBA (SEED) ---
+        // Insertamos los módulos de tu imagen para que no esté vacío
+        const [modulos] = await db.query('SELECT * FROM modulos');
+        if (modulos.length === 0) {
+            console.log("🌱 Sembrando ruta de aprendizaje...");
+            
             await db.query(`
-                INSERT INTO ejercicios (titulo, pregunta, opcion_a, opcion_b, opcion_c, respuesta_correcta)
-                VALUES 
-                ('Velocidad Simple', 'Un auto recorre 100km en 2 horas. ¿Cuál es su velocidad?', '20 km/h', '50 km/h', '100 km/h', 'b'),
-                ('Caída Libre', '¿Cuál es el valor aproximado de la gravedad en la Tierra?', '9.8 m/s²', '5.5 m/s²', '12 m/s²', 'a')
+                INSERT INTO modulos (titulo, subtitulo, orden, xp_recompensa) VALUES 
+                ('Movimiento Rectilíneo Uniforme (MRU)', 'Velocidad constante y ecuaciones de posición', 1, 50),
+                ('MRU - Problemas Avanzados', 'Aplicaciones y ejercicios prácticos', 2, 60),
+                ('MRUV - Caída Libre', 'Aceleración constante y gravedad', 3, 75),
+                ('Leyes de Newton - Primera Ley', 'Inercia y equilibrio de fuerzas', 4, 80)
             `);
-            console.log("📚 Ejercicios de prueba agregados.");
+            
+            // Insertamos contenido para la primera lección (Tu imagen 2)
+            await db.query(`
+                INSERT INTO lecciones (modulo_id, titulo, contenido_texto, formula_latex) VALUES 
+                (1, 'Introducción al MRU', 'El movimiento rectilíneo uniforme describe un objeto que se mueve en línea recta a velocidad constante.', 'v = d / t'),
+                (3, '¿Qué es el MRUV?', 'El Movimiento Rectilíneo Uniformemente Variado es aquel con aceleración constante.', 'v = v_0 + a \\cdot t')
+            `);
         }
 
-        console.log("✅ Estructura de base de datos actualizada.");
+        console.log("✅ Base de datos lista para el diseño nuevo.");
         process.exit();
     } catch (error) {
         console.error("❌ Error:", error);

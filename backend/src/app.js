@@ -8,13 +8,17 @@ const app = express();
 app.use(cors());
 app.use(express.json()); 
 
-
+// --- 1. IMPORTAR LAS RUTAS ---
 const authRoutes = require('./routes/authRoutes');
 const ejerciciosRoutes = require('./routes/ejerciciosRoutes');
+// 👇 ESTO ES NUEVO: Importamos el mapa de contenidos
+const contentRoutes = require('./routes/contentRoutes'); 
 
-// Rutas
+// --- 2. USAR LAS RUTAS ---
 app.use('/api/auth', authRoutes);
 app.use('/api/ejercicios', ejerciciosRoutes);
+// 👇 ESTO ES NUEVO: Habilitamos la URL para pedir la ruta de aprendizaje
+app.use('/api/contenido', contentRoutes);
 
 app.get('/', (req, res) => {
     res.json({ mensaje: 'API de Física funcionando 🚀' });
