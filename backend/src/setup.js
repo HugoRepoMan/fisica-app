@@ -75,6 +75,34 @@ async function setup() {
                 (1, 'Introducción al MRU', 'El movimiento rectilíneo uniforme describe un objeto que se mueve en línea recta a velocidad constante.', 'v = d / t'),
                 (3, '¿Qué es el MRUV?', 'El Movimiento Rectilíneo Uniformemente Variado es aquel con aceleración constante.', 'v = v_0 + a \\cdot t')
             `);
+            await db.query(`
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nombre VARCHAR(100) NOT NULL,
+                email VARCHAR(100) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                nivel INT DEFAULT 1,
+                xp_actual INT DEFAULT 0,
+                xp_meta INT DEFAULT 750,
+                racha INT DEFAULT 0,            -- <--- NUEVO: Días de racha 🔥
+                ultima_conexion DATE,           -- <--- NUEVO: Para calcular la racha
+                fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // EN LA TABLA PROGRESO (Añadimos 'estrellas')
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS progreso_usuario (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                modulo_id INT,
+                completado BOOLEAN DEFAULT FALSE,
+                estrellas INT DEFAULT 0,        -- <--- NUEVO: De 0 a 3 estrellas ⭐
+                fecha_completado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES usuarios(id),
+                FOREIGN KEY (modulo_id) REFERENCES modulos(id)
+            )
+        `);
         }
 
         console.log("✅ Base de datos lista para el diseño nuevo.");

@@ -11,15 +11,15 @@ app.use(express.json());
 // --- 1. IMPORTAR LAS RUTAS ---
 const authRoutes = require('./routes/authRoutes');
 const ejerciciosRoutes = require('./routes/ejerciciosRoutes');
-// 👇 ESTO ES NUEVO: Importamos el mapa de contenidos
 const contentRoutes = require('./routes/contentRoutes'); 
-
+const userRoutes = require('./routes/userRoutes');
+const progressRoutes = require('./routes/progressRoutes')
 // --- 2. USAR LAS RUTAS ---
 app.use('/api/auth', authRoutes);
 app.use('/api/ejercicios', ejerciciosRoutes);
-// 👇 ESTO ES NUEVO: Habilitamos la URL para pedir la ruta de aprendizaje
+app.use('/api/usuario', userRoutes);
 app.use('/api/contenido', contentRoutes);
-
+app.use('/api/progreso', progressRoutes);
 app.get('/', (req, res) => {
     res.json({ mensaje: 'API de Física funcionando 🚀' });
 });
