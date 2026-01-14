@@ -1,5 +1,6 @@
 const db = require('../config/db');
 
+// --- FUNCIÓN 1: COMPLETAR LECCIÓN ---
 exports.completarLeccion = async (req, res) => {
     const { modulo_id, estrellas_obtenidas } = req.body; 
     const userId = req.usuario.id;
@@ -13,14 +14,14 @@ exports.completarLeccion = async (req, res) => {
         
         const xpGanados = modulos[0].xp_recompensa || 50; 
 
-        // 2. GUARDAR PROGRESO (Marcar como hecho y guardar estrellas)
+        // GUARDAR PROGRESO
         await db.query(`
             INSERT INTO progreso_usuario (user_id, modulo_id, completado, estrellas)
             VALUES (?, ?, true, ?)
             ON DUPLICATE KEY UPDATE estrellas = GREATEST(estrellas, VALUES(estrellas))
         `, [userId, modulo_id, estrellas_obtenidas]);
 
-        // 3. ACTUALIZAR AL USUARIO (Darle su XP y sumar racha si es hoy)
+        // ACTUALIZAR AL USUARIO
         await db.query(`
             UPDATE usuarios 
             SET xp_actual = xp_actual + ?,
@@ -28,8 +29,7 @@ exports.completarLeccion = async (req, res) => {
             WHERE id = ?
         `, [xpGanados, userId]);
 
-        // 4. VERIFICAR LEVEL UP (Subir de nivel si pasa la meta)
-        // Nota: Esto es simplificado. En una app real recalcularías la meta.
+        // VERIFICAR LEVEL UP
         const [userStats] = await db.query('SELECT xp_actual, xp_meta, nivel FROM usuarios WHERE id = ?', [userId]);
         let subioNivel = false;
         let nuevoNivel = userStats[0].nivel;
@@ -37,7 +37,6 @@ exports.completarLeccion = async (req, res) => {
         if (userStats[0].xp_actual >= userStats[0].xp_meta) {
             subioNivel = true;
             nuevoNivel += 1;
-            // Actualizamos el nivel y ponemos una meta nueva (ej: meta anterior * 1.5)
             await db.query('UPDATE usuarios SET nivel = ?, xp_meta = xp_meta * 1.5 WHERE id = ?', [nuevoNivel, userId]);
         }
 
@@ -54,4 +53,38 @@ exports.completarLeccion = async (req, res) => {
         console.error(error);
         res.status(500).json({ error: "Error al guardar progreso" });
     }
-};
+}; 
+
+// --- FUNCIÓN 2: RESTAR VIDA (AHORA ESTÁ AFUERA) ---
+exports.restarVida = async (req, res) => {
+    const userId = req.usuario.id;
+
+    try {
+        // 1. Consultar vidas actuales
+        const [user] = await db.query('SELECT vidas FROM usuarios WHERE id = ?', [userId]);
+        
+        let vidasActuales = user[0].vidas;
+        
+        // Protección por si es null
+        if (vidasActuales === null || vidasActuales === undefined) vidasActuales = 5;
+
+        if (vidasActuales <= 0) {
+            return res.status(403).json({ 
+                msg: "¡No tienes vidas! 💀 Espera a que se recarguen o compra más.",
+                vidas: 0
+            });
+        }
+
+        // 2. Restar una vida
+        await db.query('UPDATE usuarios SET vidas = vidas - 1 WHERE id = ?', [userId]);
+
+        res.json({ 
+            msg: "Respuesta incorrecta. Perdiste un corazón 💔", 
+            vidas: vidasActuales - 1 
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al restar vida" });
+    }
+}; // <--- FIN DEL ARCHIVO

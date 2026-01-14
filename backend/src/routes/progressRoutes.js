@@ -6,5 +6,6 @@ const auth = require('../middleware/authMiddleware');
 // POST: /api/progreso/completar
 // El usuario envía: { "modulo_id": 1, "estrellas_obtenidas": 3 }
 router.post('/completar', auth, progressController.completarLeccion);
+router.post('/fallar', auth, progressController.restarVida);
 
 module.exports = router;
