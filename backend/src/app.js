@@ -15,6 +15,7 @@ const contentRoutes = require('./routes/contentRoutes');
 const userRoutes = require('./routes/userRoutes');
 const progressRoutes = require('./routes/progressRoutes')
 const rankingRoutes = require('./routes/rankingRoutes');
+const calculatorRoutes = require('./routes/calculatorRoutes');
 // --- 2. USAR LAS RUTAS ---
 app.use('/api/auth', authRoutes);
 app.use('/api/ejercicios', ejerciciosRoutes);
@@ -22,6 +23,7 @@ app.use('/api/usuario', userRoutes);
 app.use('/api/contenido', contentRoutes);
 app.use('/api/progreso', progressRoutes);
 app.use('/api/ranking', rankingRoutes);
+app.use('/api/calculadora', calculatorRoutes);
 app.get('/', (req, res) => {
     res.json({ mensaje: 'API de Física funcionando 🚀' });
 });
