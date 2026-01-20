@@ -20,7 +20,7 @@ const calculatorRoutes = require('./routes/calculatorRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/ejercicios', ejerciciosRoutes);
 app.use('/api/usuario', userRoutes);
-app.use('/api/contenido', contentRoutes);
+app.use('/api/content', contentRoutes);
 app.use('/api/progreso', progressRoutes);
 app.use('/api/ranking', rankingRoutes);
 app.use('/api/calculadora', calculatorRoutes);
