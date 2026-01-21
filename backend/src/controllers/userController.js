@@ -2,22 +2,47 @@ const db = require('../config/db');
 
 exports.obtenerPerfil = async (req, res) => {
     try {
-        const userId = req.usuario.id; 
+        // 1. Obtener usuario con su timestamp
+        const [users] = await db.query('SELECT id, nombre, email, nivel, xp_actual, vidas, ultima_regeneracion FROM usuarios WHERE id = ?', [req.usuario.id]);
+        let user = users[0];
 
-        // Consultamos XP, Nivel y Racha
-        const [usuarios] = await db.query(
-            'SELECT nombre, email, nivel, xp_actual, xp_meta, racha FROM usuarios WHERE id = ?', 
-            [userId]
-        );
+        // --- ⏳ LÓGICA DE REGENERACIÓN ---
+        if (user.vidas < 5) {
+            const TIEMPO_RECARGA_MINUTOS = 30; // Cada 30 minutos recupera una
+            
+            const ahora = new Date();
+            const ultimaVez = new Date(user.ultima_regeneracion);
+            
+            // Calculamos la diferencia en minutos
+            const diferenciaMilisegundos = ahora - ultimaVez;
+            const minutosPasados = Math.floor(diferenciaMilisegundos / (1000 * 60));
 
-        if (usuarios.length === 0) {
-            return res.status(404).json({ msg: 'Usuario no encontrado' });
+            if (minutosPasados >= TIEMPO_RECARGA_MINUTOS) {
+                // Calculamos cuántas vidas recuperó (ej: pasaron 60 mins -> recupera 2)
+                const vidasRecuperadas = Math.floor(minutosPasados / TIEMPO_RECARGA_MINUTOS);
+                
+                // Sumamos, pero sin pasar de 5
+                const nuevasVidas = Math.min(5, user.vidas + vidasRecuperadas);
+
+                // Si hubo cambios, actualizamos la BD
+                if (nuevasVidas > user.vidas) {
+                    await db.query(`
+                        UPDATE usuarios 
+                        SET vidas = ?, ultima_regeneracion = NOW() 
+                        WHERE id = ?
+                    `, [nuevasVidas, user.id]);
+
+                    // Actualizamos el objeto 'user' local para que la respuesta JSON salga actualizada
+                    user.vidas = nuevasVidas;
+                }
+            }
         }
+        // --- FIN LÓGICA REGENERACIÓN ---
 
-        res.json(usuarios[0]); // Devolvemos el objeto para el Header morado
+        res.json(user);
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Error al obtener perfil' });
+        res.status(500).json({ error: "Error al obtener perfil" });
     }
 };

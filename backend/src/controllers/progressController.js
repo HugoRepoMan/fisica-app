@@ -60,22 +60,21 @@ exports.restarVida = async (req, res) => {
     const userId = req.usuario.id;
 
     try {
-        // 1. Consultar vidas actuales
-        const [user] = await db.query('SELECT vidas FROM usuarios WHERE id = ?', [userId]);
-        
-        let vidasActuales = user[0].vidas;
-        
-        // Protección por si es null
-        if (vidasActuales === null || vidasActuales === undefined) vidasActuales = 5;
+        // 1. Consultar vidas
+        const [users] = await db.query('SELECT vidas FROM usuarios WHERE id = ?', [userId]);
+        let vidasActuales = users[0].vidas;
 
         if (vidasActuales <= 0) {
-            return res.status(403).json({ 
-                msg: "¡No tienes vidas! 💀 Espera a que se recarguen o compra más.",
-                vidas: 0
-            });
+            return res.status(403).json({ msg: "No tienes vidas. ¡Espera o compra más!", vidas: 0 });
         }
 
-        // 2. Restar una vida
+        // 2. Lógica del Reloj:
+        // Si tienes la salud llena (5) y vas a perder una, EMPERZAMOS A CONTAR EL TIEMPO AHORA.
+        if (vidasActuales === 5) {
+            await db.query('UPDATE usuarios SET ultima_regeneracion = NOW() WHERE id = ?', [userId]);
+        }
+
+        // 3. Restar la vida
         await db.query('UPDATE usuarios SET vidas = vidas - 1 WHERE id = ?', [userId]);
 
         res.json({ 
@@ -87,4 +86,4 @@ exports.restarVida = async (req, res) => {
         console.error(error);
         res.status(500).json({ error: "Error al restar vida" });
     }
-}; // <--- FIN DEL ARCHIVO
+};

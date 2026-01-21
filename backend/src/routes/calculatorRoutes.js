@@ -3,13 +3,15 @@ const router = express.Router();
 const calculatorController = require('../controllers/calculatorController');
 const auth = require('../middleware/authMiddleware');
 
-// POST: /api/calculadora/newton
+// 1. Calculadoras (POST)
 router.post('/newton', auth, calculatorController.calcularNewton);
-
-// POST: /api/calculadora/friccion
 router.post('/friccion', auth, calculatorController.calcularFriccion);
-
-// POST: /api/calculadora/peso
 router.post('/peso', auth, calculatorController.calcularPeso);
+
+// 2. Diagrama de Cuerpo Libre (DCL) - Sirve para las 3 calculadoras
+router.post('/dcl', auth, calculatorController.obtenerDCL);
+
+// 3. Historial
+router.get('/historial', auth, calculatorController.obtenerHistorial);
 
 module.exports = router;
