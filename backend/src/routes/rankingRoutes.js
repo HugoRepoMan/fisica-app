@@ -2,9 +2,9 @@
 const express = require('express');
 const router = express.Router();
 const rankingController = require('../controllers/rankingController');
-const auth = require('../middleware/authMiddleware'); // Solo usuarios logueados pueden ver el ranking
+const auth = require('../middleware/authMiddleware');
 
-// GET: http://localhost:3000/api/ranking
+// GET: /api/ranking
 router.get('/', auth, rankingController.obtenerRanking);
 
 module.exports = router;

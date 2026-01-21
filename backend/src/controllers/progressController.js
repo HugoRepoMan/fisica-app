@@ -1,89 +1,106 @@
+// src/controllers/progressController.js
 const db = require('../config/db');
 
-// --- FUNCIÓN 1: COMPLETAR LECCIÓN ---
-exports.completarLeccion = async (req, res) => {
-    const { modulo_id, estrellas_obtenidas } = req.body; 
-    const userId = req.usuario.id;
-
-    try {
-        const [modulos] = await db.query('SELECT xp_recompensa FROM modulos WHERE id = ?', [modulo_id]);
-        
-        if (modulos.length === 0) {
-            return res.status(404).json({ msg: "Módulo no encontrado" });
-        }
-        
-        const xpGanados = modulos[0].xp_recompensa || 50; 
-
-        // GUARDAR PROGRESO
-        await db.query(`
-            INSERT INTO progreso_usuario (user_id, modulo_id, completado, estrellas)
-            VALUES (?, ?, true, ?)
-            ON DUPLICATE KEY UPDATE estrellas = GREATEST(estrellas, VALUES(estrellas))
-        `, [userId, modulo_id, estrellas_obtenidas]);
-
-        // ACTUALIZAR AL USUARIO
-        await db.query(`
-            UPDATE usuarios 
-            SET xp_actual = xp_actual + ?,
-                ultima_conexion = CURRENT_DATE
-            WHERE id = ?
-        `, [xpGanados, userId]);
-
-        // VERIFICAR LEVEL UP
-        const [userStats] = await db.query('SELECT xp_actual, xp_meta, nivel FROM usuarios WHERE id = ?', [userId]);
-        let subioNivel = false;
-        let nuevoNivel = userStats[0].nivel;
-
-        if (userStats[0].xp_actual >= userStats[0].xp_meta) {
-            subioNivel = true;
-            nuevoNivel += 1;
-            await db.query('UPDATE usuarios SET nivel = ?, xp_meta = xp_meta * 1.5 WHERE id = ?', [nuevoNivel, userId]);
-        }
-
-        res.json({
-            mensaje: "¡Lección completada!",
-            xp_ganados: xpGanados,
-            estrellas: estrellas_obtenidas,
-            nuevo_total_xp: userStats[0].xp_actual,
-            subio_nivel: subioNivel,
-            nivel_actual: nuevoNivel
-        });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error al guardar progreso" });
-    }
-}; 
-
-// --- FUNCIÓN 2: RESTAR VIDA (AHORA ESTÁ AFUERA) ---
+// --- 1. RESTAR VIDA (Ya lo tenías, lo dejamos igual) ---
 exports.restarVida = async (req, res) => {
     const userId = req.usuario.id;
-
     try {
-        // 1. Consultar vidas
         const [users] = await db.query('SELECT vidas FROM usuarios WHERE id = ?', [userId]);
-        let vidasActuales = users[0].vidas;
+        let vidas = users[0].vidas;
 
-        if (vidasActuales <= 0) {
-            return res.status(403).json({ msg: "No tienes vidas. ¡Espera o compra más!", vidas: 0 });
-        }
+        if (vidas <= 0) return res.status(403).json({ msg: "Sin vidas", vidas: 0 });
 
-        // 2. Lógica del Reloj:
-        // Si tienes la salud llena (5) y vas a perder una, EMPERZAMOS A CONTAR EL TIEMPO AHORA.
-        if (vidasActuales === 5) {
+        if (vidas === 5) { // Si estaba lleno, activamos el reloj de regeneración
             await db.query('UPDATE usuarios SET ultima_regeneracion = NOW() WHERE id = ?', [userId]);
         }
 
-        // 3. Restar la vida
         await db.query('UPDATE usuarios SET vidas = vidas - 1 WHERE id = ?', [userId]);
+        res.json({ msg: "Perdiste un corazón 💔", vidas: vidas - 1 });
+    } catch (error) { res.status(500).json({ error: "Error al restar vida" }); }
+};
 
-        res.json({ 
-            msg: "Respuesta incorrecta. Perdiste un corazón 💔", 
-            vidas: vidasActuales - 1 
+// --- 2. COMPLETAR LECCIÓN (¡LA MAGIA! ✨) ---
+exports.completarLeccion = async (req, res) => {
+    const userId = req.usuario.id;
+    const { puntaje, total_preguntas } = req.body; // El front nos manda cuánto sacó (ej: 4 de 5)
+
+    try {
+        // A. CÁLCULOS DE RECOMPENSA 💰
+        const XP_BASE = 20;
+        const bono = Math.round((puntaje / total_preguntas) * 10); // Bono por precisión
+        const xpGanada = XP_BASE + bono;
+        
+        // B. ACTUALIZAR ESTADÍSTICAS DEL USUARIO 📈
+        // Sumamos XP, Lecciones completadas, aciertos e intentos
+        await db.query(`
+            UPDATE usuarios 
+            SET xp_actual = xp_actual + ?,
+                lecciones_completadas = lecciones_completadas + 1,
+                total_aciertos = total_aciertos + ?,
+                total_intentos = total_intentos + ?
+            WHERE id = ?
+        `, [xpGanada, puntaje, total_preguntas, userId]);
+
+        // C. REVISAR NIVEL (LEVEL UP) 🆙
+        // Traemos el usuario actualizado para ver si sube de nivel
+        const [users] = await db.query('SELECT xp_actual, nivel, lecciones_completadas FROM usuarios WHERE id = ?', [userId]);
+        const user = users[0];
+        
+        let nuevoNivel = user.nivel;
+        // Fórmula simple: Cada 200 XP subes un nivel (ajústalo a tu gusto)
+        const nivelCalculado = Math.floor(user.xp_actual / 200) + 1;
+
+        let subioNivel = false;
+        if (nivelCalculado > user.nivel) {
+            nuevoNivel = nivelCalculado;
+            subioNivel = true;
+            await db.query('UPDATE usuarios SET nivel = ? WHERE id = ?', [nuevoNivel, userId]);
+        }
+
+        // D. REVISAR LOGROS (MEDALLAS) 🏅
+        const nuevosLogros = [];
+
+        // Logro 1: "Primer Paso" (Si completó su 1ra lección)
+        if (user.lecciones_completadas === 1) {
+            const idLogro = 1; // ID en la base de datos (definido en el script anterior)
+            await otorgarLogro(userId, idLogro, nuevosLogros);
+        }
+
+        // Logro 2: "Perfeccionista" (Si sacó puntaje perfecto)
+        if (puntaje === total_preguntas) {
+             // Aquí podrías tener lógica más compleja, por ahora simplificamos
+             // Si quieres dar medalla por sacar 100/100
+        }
+
+        // E. RESPUESTA AL FRONTEND 🎉
+        res.json({
+            msg: "¡Lección completada!",
+            resumen: {
+                xp_ganada: xpGanada,
+                nuevo_total_xp: user.xp_actual,
+                subio_nivel: subioNivel,
+                nuevo_nivel: nuevoNivel,
+                logros_desbloqueados: nuevosLogros // Array con los nombres de medallas ganadas hoy
+            }
         });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Error al restar vida" });
+        res.status(500).json({ error: "Error al completar lección" });
     }
 };
+
+// --- AUXILIAR: Función para dar logro sin repetir ---
+async function otorgarLogro(userId, logroId, listaLogros) {
+    // 1. Verificar si ya lo tiene
+    const [existe] = await db.query('SELECT * FROM usuario_logros WHERE user_id = ? AND logro_id = ?', [userId, logroId]);
+    
+    if (existe.length === 0) {
+        // 2. Si no lo tiene, se lo damos
+        await db.query('INSERT INTO usuario_logros (user_id, logro_id) VALUES (?, ?)', [userId, logroId]);
+        
+        // 3. Obtenemos el nombre para avisarle al usuario
+        const [info] = await db.query('SELECT titulo FROM logros WHERE id = ?', [logroId]);
+        listaLogros.push(info[0].titulo);
+    }
+}

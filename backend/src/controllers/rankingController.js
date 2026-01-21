@@ -3,25 +3,35 @@ const db = require('../config/db');
 
 exports.obtenerRanking = async (req, res) => {
     try {
-        // Consultamos los usuarios ordenados por XP (De mayor a menor)
-        // LIMIT 10 para no traer miles de usuarios, solo el Top 10
-        const [ranking] = await db.query(`
-            SELECT id, nombre, nivel, xp_actual, racha 
+        // 1. Obtener el Top 10 usuarios con más XP
+        // Solo enviamos nombre, nivel y xp (no enviamos email ni password por seguridad)
+        const [top10] = await db.query(`
+            SELECT nombre, nivel, xp_actual, titulo_usuario 
             FROM usuarios 
             ORDER BY xp_actual DESC 
             LIMIT 10
         `);
 
-        // Agregamos una propiedad "posicion" (1, 2, 3...) para que el Frontend sepa el número
-        const rankingConPosicion = ranking.map((usuario, index) => ({
-            posicion: index + 1,
-            ...usuario
-        }));
+        // 2. (Opcional) Calcular la posición del usuario actual
+        // Contamos cuánta gente tiene MÁS xp que yo. Si hay 5 personas con más XP, yo soy el 6.
+        const userId = req.usuario.id;
+        let miPosicion = 0;
 
-        res.json(rankingConPosicion);
+        const [userStats] = await db.query('SELECT xp_actual FROM usuarios WHERE id = ?', [userId]);
+        
+        if (userStats.length > 0) {
+            const miXP = userStats[0].xp_actual;
+            const [genteMejor] = await db.query('SELECT COUNT(*) as count FROM usuarios WHERE xp_actual > ?', [miXP]);
+            miPosicion = genteMejor[0].count + 1;
+        }
+
+        res.json({
+            top10: top10,
+            miPosicion: miPosicion
+        });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Error al obtener el ranking" });
+        res.status(500).json({ error: "Error al obtener ranking" });
     }
 };
