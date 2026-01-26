@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const contentController = require('../controllers/contentController');
 
-// Esto define el endpoint GET /api/content
-router.get('/', contentController.obtenerRuta);
+// Cambiamos '/' por '/ruta' para que coincida con el frontend
+router.get('/ruta', contentController.obtenerRuta); 
 
-// Esto define el endpoint GET /api/content/leccion/:id_modulo
+// El resto se queda igual
 router.get('/leccion/:id_modulo', contentController.obtenerLeccion);
 
 module.exports = router;
