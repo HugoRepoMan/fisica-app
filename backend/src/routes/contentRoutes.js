@@ -1,13 +1,11 @@
-// src/routes/contentRoutes.js
 const express = require('express');
 const router = express.Router();
-const contentController = require('../controllers/contentController'); // Importamos el archivo del paso 1
-const auth = require('../middleware/authMiddleware'); // Importante: necesitamos saber quién es el usuario
+const contentController = require('../controllers/contentController');
 
-// Ruta Principal: Obtener el mapa con candados (Requiere Token)
-router.get('/ruta', auth, contentController.obtenerRuta);
+// Esto define el endpoint GET /api/content
+router.get('/', contentController.obtenerRuta);
 
-// Ruta Secundaria: Obtener el contenido interno (Fórmulas)
-router.get('/leccion/:id_modulo', auth, contentController.obtenerLeccion);
+// Esto define el endpoint GET /api/content/leccion/:id_modulo
+router.get('/leccion/:id_modulo', contentController.obtenerLeccion);
 
 module.exports = router;
