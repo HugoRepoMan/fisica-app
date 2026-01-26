@@ -2,7 +2,7 @@ const db = require('../config/db');
 
 exports.obtenerRuta = async (req, res) => {
     try {
-        // Usamos ALIAS (AS) para que el JSON coincida con el Frontend
+        // Consultamos con los nombres que existen en tu BD (según el DESCRIBE que me mostraste)
         const [modulos] = await db.query(`
             SELECT 
                 id, 
@@ -14,25 +14,16 @@ exports.obtenerRuta = async (req, res) => {
             ORDER BY orden ASC
         `);
 
-        // Si la BD tiene datos, los enviamos con los nombres corregidos
-        if (modulos.length > 0) {
-            return res.json(modulos);
-        }
-
-        // Si está vacía, enviamos el respaldo (con nombres correctos)
-        return res.json([
-            {
-                id: 1,
-                titulo: "Leyes de Newton",
-                descripcion: "Base de datos vacía. Cargando datos de respaldo.",
-                xp: 100,
-                estado: "desbloqueado"
-            }
-        ]);
-
+        res.json(modulos);
     } catch (error) {
-        console.error("Error en obtenerRuta:", error);
-        res.status(500).json({ error: "Error al obtener la ruta de aprendizaje" });
+        // Este console.log aparecerá en los logs de RENDER
+        console.error("DETALLE DEL ERROR:", error.message);
+        
+        // Enviamos el error real al frontend para saber qué falta
+        res.status(500).json({ 
+            error: "Error en la base de datos", 
+            mensaje: error.message 
+        });
     }
 };
 
