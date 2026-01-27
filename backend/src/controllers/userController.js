@@ -1,68 +1,89 @@
-// src/controllers/userController.js
-const db = require('../config/db'); // <--- Importamos como 'db'
+const db = require('../config/db');
 
 exports.obtenerPerfil = async (req, res) => {
+    // LOG DE DEPURACIÓN (Para ver en Render si entra)
+    console.log("--> 👤 Obteniendo perfil para ID:", req.usuario.id);
+
     try {
         const userId = req.usuario.id;
-        
-        // 1. CORREGIDO: Usamos 'db' en lugar de 'pool'
+
+        // 1. OBTENER DATOS DE LA BD
+        // Traemos todo lo necesario para pintar la pantalla principal
         const [rows] = await db.query(
             `SELECT id, nombre, email, nivel, xp_actual, vidas, energia, racha, ultima_regeneracion 
              FROM usuarios WHERE id = ?`,
             [userId]
         );
 
-        if (rows.length === 0) return res.status(404).json({ msg: "Usuario no encontrado" });
+        if (rows.length === 0) {
+            return res.status(404).json({ msg: "Usuario no encontrado" });
+        }
 
         let usuario = rows[0];
 
-        // --- LÓGICA DE REGENERACIÓN TIPO DUOLINGO ---
+        // --- 2. LÓGICA DE REGENERACIÓN DE VIDAS (El Reloj ⏰) ---
+        // Esto ocurre "pasivamente" solo con consultar el perfil
         const MAX_VIDAS = 5;
         const TIEMPO_REGENERACION_MS = 30 * 60 * 1000; // 30 minutos
         
-        // Validamos que 'vidas' no sea null (por si es un usuario antiguo)
-        const vidasActuales = usuario.vidas !== null ? usuario.vidas : 5;
+        // Protección contra nulos (si es usuario viejo)
+        let vidasActuales = usuario.vidas !== null ? usuario.vidas : 5;
+        let huboCambios = false;
 
         if (vidasActuales < MAX_VIDAS) {
             const ahora = new Date();
-            // Si ultima_regeneracion es null, usamos 'ahora'
-            const ultimaVez = new Date(usuario.ultima_regeneracion || ahora);
-            const tiempoPasado = ahora - ultimaVez; 
+            // Si no tiene fecha registrada, asumimos que fue "ahora" para no romper el cálculo
+            const ultimaVez = usuario.ultima_regeneracion ? new Date(usuario.ultima_regeneracion) : new Date();
+            
+            const tiempoPasado = ahora - ultimaVez; // Milisegundos pasados
 
             if (tiempoPasado >= TIEMPO_REGENERACION_MS) {
+                // Cuántas vidas caben en el tiempo que pasó
                 const vidasRecuperadas = Math.floor(tiempoPasado / TIEMPO_REGENERACION_MS);
+                
+                // Sumamos sin pasarnos del máximo
                 const nuevasVidas = Math.min(vidasActuales + vidasRecuperadas, MAX_VIDAS);
                 
                 if (nuevasVidas > vidasActuales) {
+                    // CÁLCULO DE PRECISIÓN:
+                    // No ponemos "ahora" como nueva fecha, sino que restamos el tiempo que "sobró"
+                    // para que el contador de la siguiente vida no empiece de cero.
                     const tiempoSobrante = tiempoPasado % TIEMPO_REGENERACION_MS;
                     const nuevaFechaRegeneracion = new Date(ahora - tiempoSobrante); 
 
-                    // 2. CORREGIDO: Usamos 'db' aquí también
+                    // Actualizamos la base de datos
                     await db.query(
                         "UPDATE usuarios SET vidas = ?, ultima_regeneracion = ? WHERE id = ?",
                         [nuevasVidas, nuevaFechaRegeneracion, userId]
                     );
                     
+                    // Actualizamos el objeto en memoria para enviarlo al frontend
                     usuario.vidas = nuevasVidas;
                     usuario.ultima_regeneracion = nuevaFechaRegeneracion;
+                    huboCambios = true;
+                    console.log(`--> 💚 Vidas regeneradas: De ${vidasActuales} a ${nuevasVidas}`);
                 }
             }
         }
-        // --------------------------------------------
 
-        // Enviamos la respuesta limpia y segura
-        res.json({
+        // --- 3. RESPUESTA AL FRONTEND ---
+        // Enviamos un objeto limpio y seguro
+        const respuesta = {
+            id: usuario.id,
             nombre: usuario.nombre,
+            email: usuario.email,
             nivel: usuario.nivel || 1,
-            xp: usuario.xp_actual || 0,
-            vidas: usuario.vidas !== null ? usuario.vidas : 5,
-            energia: usuario.energia !== null ? usuario.energia : 5,
+            xp: usuario.xp_actual || 0,     // Compatible con tu front
+            vidas: usuario.vidas,           // Ya actualizado
+            energia: usuario.energia || 0,
             racha: usuario.racha || 0
-        });
+        };
+
+        res.json(respuesta);
 
     } catch (error) {
-        console.error("Error en perfil:", error);
-        res.status(500).send("Error en el servidor");
+        console.error("ERROR CRÍTICO EN PERFIL:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
     }
 };
 
@@ -71,7 +92,7 @@ exports.obtenerLogros = async (req, res) => {
     try {
         const userId = req.usuario.id;
 
-        // Aquí ya estabas usando 'db' correctamente, así que esto funcionará bien
+        // Consulta inteligente: Trae todos los logros y marca cuáles tiene el usuario
         const [logros] = await db.query(`
             SELECT 
                 l.id, 
