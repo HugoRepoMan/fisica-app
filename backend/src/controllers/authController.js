@@ -66,7 +66,7 @@ exports.login = async (req, res) => {
         }
 
         // 1. Buscar usuario
-        // NOTA: Asegúrate que tu User.findByEmail haga un "SELECT *" para traer vidas y energía
+        // NOTA: Asegúrate de que tu User.findByEmail haga un "SELECT *" para traer vidas y energía
         const usuario = await User.findByEmail(email);
         
         if (!usuario) {
