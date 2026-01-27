@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json()); 
 
 // =======================================================
-// 🕵️ ZONA DEL ESPÍA (LOGGER)
+// 🕵️ ZONA DEL ESPÍA (LOGGER) - VERSIÓN CORREGIDA
 // =======================================================
 app.use((req, res, next) => {
     console.log(`\n🔴 ------------------------------------------------`);
@@ -19,18 +19,17 @@ app.use((req, res, next) => {
     const token = req.header('x-auth-token');
     console.log(`🔑 Token recibido: ${token ? '✅ SÍ (' + token.substring(0, 10) + '...)' : '❌ NO TIENE'}`);
     
-    // Mostramos qué datos está enviando el celular
-    if (Object.keys(req.body).length > 0) {
+    // CORRECCIÓN: Verificamos si req.body existe antes de leerlo
+    if (req.body && Object.keys(req.body).length > 0) {
         console.log(`📦 Body (Datos):`, JSON.stringify(req.body, null, 2));
     } else {
-        console.log(`📦 Body: (Vacío)`);
+        console.log(`📦 Body: (Vacío o GET)`);
     }
     console.log(`------------------------------------------------ 🔴\n`);
     
-    next(); // ¡IMPORTANTE! Pasa el control a las rutas de abajo
+    next(); 
 });
 // =======================================================
-
 
 // --- 1. IMPORTAR LAS RUTAS ---
 const authRoutes = require('./routes/authRoutes');
