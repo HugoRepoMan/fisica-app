@@ -1,12 +1,12 @@
 // src/controllers/userController.js
-const db = require('../config/db');
+const db = require('../config/db'); // <--- Importamos como 'db'
 
 exports.obtenerPerfil = async (req, res) => {
     try {
         const userId = req.usuario.id;
         
-        // 1. Obtenemos datos actuales
-        const [rows] = await pool.query(
+        // 1. CORREGIDO: Usamos 'db' en lugar de 'pool'
+        const [rows] = await db.query(
             `SELECT id, nombre, email, nivel, xp_actual, vidas, energia, racha, ultima_regeneracion 
              FROM usuarios WHERE id = ?`,
             [userId]
@@ -18,34 +18,31 @@ exports.obtenerPerfil = async (req, res) => {
 
         // --- LÓGICA DE REGENERACIÓN TIPO DUOLINGO ---
         const MAX_VIDAS = 5;
-        const TIEMPO_REGENERACION_MS = 30 * 60 * 1000; // 30 minutos en milisegundos
+        const TIEMPO_REGENERACION_MS = 30 * 60 * 1000; // 30 minutos
         
-        // Si tiene menos de 5 vidas, calculamos si debe recuperar alguna
-        if (usuario.vidas < MAX_VIDAS) {
+        // Validamos que 'vidas' no sea null (por si es un usuario antiguo)
+        const vidasActuales = usuario.vidas !== null ? usuario.vidas : 5;
+
+        if (vidasActuales < MAX_VIDAS) {
             const ahora = new Date();
-            const ultimaVez = new Date(usuario.ultima_regeneracion);
-            const tiempoPasado = ahora - ultimaVez; // Diferencia en milisegundos
+            // Si ultima_regeneracion es null, usamos 'ahora'
+            const ultimaVez = new Date(usuario.ultima_regeneracion || ahora);
+            const tiempoPasado = ahora - ultimaVez; 
 
             if (tiempoPasado >= TIEMPO_REGENERACION_MS) {
-                // Cuántas vidas recuperó en este tiempo
                 const vidasRecuperadas = Math.floor(tiempoPasado / TIEMPO_REGENERACION_MS);
+                const nuevasVidas = Math.min(vidasActuales + vidasRecuperadas, MAX_VIDAS);
                 
-                // Calculamos nuevas vidas (sin pasarnos de 5)
-                const nuevasVidas = Math.min(usuario.vidas + vidasRecuperadas, MAX_VIDAS);
-                
-                // Si hubo cambios, actualizamos la Base de Datos
-                if (nuevasVidas > usuario.vidas) {
-                    // Calculamos la "nueva" última regeneración (restamos el tiempo sobrante para ser precisos)
-                    // Esto evita que pierda minutos si entra a los 35 min (recupera 1 vida y le sobran 5 min para la siguiente)
+                if (nuevasVidas > vidasActuales) {
                     const tiempoSobrante = tiempoPasado % TIEMPO_REGENERACION_MS;
                     const nuevaFechaRegeneracion = new Date(ahora - tiempoSobrante); 
 
-                    await pool.query(
+                    // 2. CORREGIDO: Usamos 'db' aquí también
+                    await db.query(
                         "UPDATE usuarios SET vidas = ?, ultima_regeneracion = ? WHERE id = ?",
                         [nuevasVidas, nuevaFechaRegeneracion, userId]
                     );
                     
-                    // Actualizamos el objeto usuario en memoria para enviarlo al frontend ya actualizado
                     usuario.vidas = nuevasVidas;
                     usuario.ultima_regeneracion = nuevaFechaRegeneracion;
                 }
@@ -53,7 +50,15 @@ exports.obtenerPerfil = async (req, res) => {
         }
         // --------------------------------------------
 
-        res.json(usuario);
+        // Enviamos la respuesta limpia y segura
+        res.json({
+            nombre: usuario.nombre,
+            nivel: usuario.nivel || 1,
+            xp: usuario.xp_actual || 0,
+            vidas: usuario.vidas !== null ? usuario.vidas : 5,
+            energia: usuario.energia !== null ? usuario.energia : 5,
+            racha: usuario.racha || 0
+        });
 
     } catch (error) {
         console.error("Error en perfil:", error);
@@ -61,13 +66,12 @@ exports.obtenerPerfil = async (req, res) => {
     }
 };
 
-// --- NUEVO: OBTENER LOGROS ---
+// --- OBTENER LOGROS ---
 exports.obtenerLogros = async (req, res) => {
     try {
         const userId = req.usuario.id;
 
-        // Consulta Magica: Trae todos los logros y marca cuáles tiene el usuario
-        // Usamos LEFT JOIN para ver si existe en 'usuario_logros'
+        // Aquí ya estabas usando 'db' correctamente, así que esto funcionará bien
         const [logros] = await db.query(`
             SELECT 
                 l.id, 
