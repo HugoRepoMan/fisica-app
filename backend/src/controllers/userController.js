@@ -4,53 +4,60 @@ const db = require('../config/db');
 exports.obtenerPerfil = async (req, res) => {
     try {
         const userId = req.usuario.id;
-
-        // 1. Obtener datos del usuario + Stats
-        const [users] = await db.query(`
-            SELECT id, nombre, email, nivel, xp_actual, vidas, 
-                   racha, lecciones_completadas, total_aciertos, total_intentos 
-            FROM usuarios WHERE id = ?
-        `, [userId]);
         
-        if (users.length === 0) return res.status(404).json({ msg: "Usuario no encontrado" });
+        // 1. Obtenemos datos actuales
+        const [rows] = await pool.query(
+            `SELECT id, nombre, email, nivel, xp_actual, vidas, energia, racha, ultima_regeneracion 
+             FROM usuarios WHERE id = ?`,
+            [userId]
+        );
+
+        if (rows.length === 0) return res.status(404).json({ msg: "Usuario no encontrado" });
+
+        let usuario = rows[0];
+
+        // --- LÓGICA DE REGENERACIÓN TIPO DUOLINGO ---
+        const MAX_VIDAS = 5;
+        const TIEMPO_REGENERACION_MS = 30 * 60 * 1000; // 30 minutos en milisegundos
         
-        let user = users[0];
+        // Si tiene menos de 5 vidas, calculamos si debe recuperar alguna
+        if (usuario.vidas < MAX_VIDAS) {
+            const ahora = new Date();
+            const ultimaVez = new Date(usuario.ultima_regeneracion);
+            const tiempoPasado = ahora - ultimaVez; // Diferencia en milisegundos
 
-        // 2. Cálculos para el Frontend
-        // Precisión: (Aciertos / Intentos) * 100
-        let precision = 0;
-        if (user.total_intentos > 0) {
-            precision = Math.round((user.total_aciertos / user.total_intentos) * 100);
-        }
+            if (tiempoPasado >= TIEMPO_REGENERACION_MS) {
+                // Cuántas vidas recuperó en este tiempo
+                const vidasRecuperadas = Math.floor(tiempoPasado / TIEMPO_REGENERACION_MS);
+                
+                // Calculamos nuevas vidas (sin pasarnos de 5)
+                const nuevasVidas = Math.min(usuario.vidas + vidasRecuperadas, MAX_VIDAS);
+                
+                // Si hubo cambios, actualizamos la Base de Datos
+                if (nuevasVidas > usuario.vidas) {
+                    // Calculamos la "nueva" última regeneración (restamos el tiempo sobrante para ser precisos)
+                    // Esto evita que pierda minutos si entra a los 35 min (recupera 1 vida y le sobran 5 min para la siguiente)
+                    const tiempoSobrante = tiempoPasado % TIEMPO_REGENERACION_MS;
+                    const nuevaFechaRegeneracion = new Date(ahora - tiempoSobrante); 
 
-        // Título basado en Nivel (Cosmético)
-        let titulo = "Estudiante Novato";
-        if (user.nivel >= 3) titulo = "Estudiante de Física";
-        if (user.nivel >= 5) titulo = "Maestro de las Leyes";
-        if (user.nivel >= 10) titulo = "El Nuevo Einstein";
-
-        // Meta de XP para el siguiente nivel (Ej: Nivel * 150)
-        const xpMeta = user.nivel * 250; 
-
-        // 3. Respuesta JSON formateada para tu diseño
-        res.json({
-            nombre: user.nombre,
-            titulo: titulo,
-            nivel: user.nivel,
-            xp_actual: user.xp_actual,
-            xp_meta: xpMeta,
-            xp_total: user.xp_actual + (user.nivel * 1000), // Simulación de XP histórica
-            vidas: user.vidas,
-            stats: {
-                racha: user.racha,
-                lecciones_completadas: user.lecciones_completadas,
-                precision: precision
+                    await pool.query(
+                        "UPDATE usuarios SET vidas = ?, ultima_regeneracion = ? WHERE id = ?",
+                        [nuevasVidas, nuevaFechaRegeneracion, userId]
+                    );
+                    
+                    // Actualizamos el objeto usuario en memoria para enviarlo al frontend ya actualizado
+                    usuario.vidas = nuevasVidas;
+                    usuario.ultima_regeneracion = nuevaFechaRegeneracion;
+                }
             }
-        });
+        }
+        // --------------------------------------------
+
+        res.json(usuario);
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error al obtener perfil" });
+        console.error("Error en perfil:", error);
+        res.status(500).send("Error en el servidor");
     }
 };
 
