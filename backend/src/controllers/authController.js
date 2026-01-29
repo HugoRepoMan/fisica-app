@@ -11,7 +11,7 @@ const {
 // =======================================================
 // REGISTRO DE USUARIO
 // =======================================================
-exports.registrarUsuario = async (req, res) => {
+const registrarUsuario = async (req, res) => {
     try {
         let { nombre, email, password } = req.body;
 
@@ -97,7 +97,7 @@ exports.registrarUsuario = async (req, res) => {
 // =======================================================
 // LOGIN DE USUARIO
 // =======================================================
-exports.login = async (req, res) => {
+const login = async (req, res) => {
     try {
         let { email, password } = req.body;
 
