@@ -7,35 +7,46 @@ require('dotenv').config();
 const app = express();
 
 // =======================================================
-// MIDDLEWARES - ORDEN IMPORTANTE
+// CONFIGURACIÓN CRÍTICA PARA RENDER
 // =======================================================
+// DEBE IR PRIMERO - Render usa proxy reverso
+app.set('trust proxy', 1);
 
-// 1. Helmet primero (seguridad)
-app.use(helmet());
-
-// 2. CORS
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:8000', 'file://'];
-
-const corsOptions = {
-    origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
-            callback(null, true);
-        } else {
-            callback(null, true); // Permitir todo en desarrollo
-        }
-    },
-    credentials: true
-};
-app.use(cors(corsOptions));
-
-// 3. BODY PARSERS - CRÍTICO: DEBEN IR ANTES DE LAS RUTAS
+// =======================================================
+// MIDDLEWARES DE PARSING - DEBEN IR ANTES QUE TODO
+// =======================================================
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 4. Logger (opcional)
+// =======================================================
+// SEGURIDAD
+// =======================================================
+app.use(helmet());
+
+// CORS
+app.use(cors({
+    origin: function (origin, callback) {
+        // Permitir todos los orígenes en desarrollo
+        callback(null, true);
+    },
+    credentials: true
+}));
+
+// =======================================================
+// RATE LIMITING
+// =======================================================
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: "Demasiadas peticiones" },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+app.use('/api/', generalLimiter);
+
+// =======================================================
+// LOGGER (solo desarrollo)
+// =======================================================
 if (process.env.NODE_ENV !== 'production') {
     app.use((req, res, next) => {
         console.log(`${req.method} ${req.url}`);
@@ -47,14 +58,6 @@ if (process.env.NODE_ENV !== 'production') {
         next();
     });
 }
-
-// 5. Rate limiting
-const generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: { error: "Demasiadas peticiones" }
-});
-app.use('/api/', generalLimiter);
 
 // =======================================================
 // RUTAS
@@ -81,7 +84,8 @@ app.use('/api/calculadora', calculatorRoutes);
 app.get('/', (req, res) => {
     res.json({ 
         mensaje: 'API de Física funcionando 🚀',
-        version: '2.0.0'
+        version: '2.0.0',
+        status: 'active'
     });
 });
 
@@ -95,6 +99,7 @@ app.get('/health', async (req, res) => {
             timestamp: new Date().toISOString()
         });
     } catch (error) {
+        console.error('Health check error:', error);
         res.status(503).json({ 
             status: 'unhealthy',
             database: 'disconnected'
@@ -110,9 +115,9 @@ app.use((req, res) => {
     });
 });
 
-// Error handler
+// Error handler global
 app.use((err, req, res, next) => {
-    console.error('❌ Error:', err);
+    console.error('❌ Error global:', err);
     res.status(err.status || 500).json({
         error: process.env.NODE_ENV === 'production' 
             ? 'Error interno del servidor' 
@@ -126,8 +131,10 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log(`\n🚀 Servidor en puerto ${PORT}`);
-    console.log(`   Entorno: ${process.env.NODE_ENV || 'development'}\n`);
+    console.log(`\n🚀 ========================================`);
+    console.log(`   Servidor en puerto ${PORT}`);
+    console.log(`   Entorno: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`========================================\n`);
 });
 
 module.exports = app;
