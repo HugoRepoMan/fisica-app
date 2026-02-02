@@ -1,0 +1,32 @@
+.option {
+  padding: 16px;
+  border-radius: 16px;
+  border: 2px solid #e5e7eb;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.option.correct {
+  border-color: #22c55e;
+  background: #dcfce7;
+}
+
+.option.wrong {
+  border-color: #ef4444;
+  background: #fee2e2;
+}
+
+.feedback {
+  display: none;
+  padding: 20px;
+  border-radius: 20px;
+  margin-top: 20px;
+}
+
+.feedback.success {
+  background: #dcfce7;
+}
+
+.feedback.error {
+  background: #fee2e2;
+}

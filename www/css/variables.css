@@ -1,0 +1,19 @@
+:root {
+    /* Colores principales */
+    --primary-color: #5e42ff;
+    --secondary-color: #e945b0;
+
+    /* Gradientes */
+    --bg-gradient: linear-gradient(180deg, #8a55ff 0%, #e945b0 100%);
+
+    /* Texto */
+    --text-light: #ffffff;
+    --text-dark: #333333;
+
+    /* UI */
+    --card-radius: 25px;
+    --item-radius: 20px;
+
+    /* Sombras */
+    --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.2);
+}

@@ -1,0 +1,31 @@
+{
+  "name": "com.teamespe.fisica",
+  "displayName": "Física ESPE",
+  "version": "2.0.0",
+  "description": "Aplicación oficial de aprendizaje de Física del Team ESPE.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ecosystem:cordova",
+    "fisica",
+    "educacion"
+  ],
+  "author": {
+    "name": "Erick Maigua - Team ESPE",
+    "email": "ejmiagua1@espe.edu.ec"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "cordova-android": "^14.0.1",
+    "cordova-browser": "^7.0.0"
+  },
+  "cordova": {
+    "platforms": [
+      "browser",
+      "android"
+    ],
+    "plugins": {}
+  }
+}

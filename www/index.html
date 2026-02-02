@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' gap: https://fisica-backend-pro.onrender.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://fisica-backend-pro.onrender.com; img-src 'self' data: https:;">
+    
+    <title>Física App</title>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .loading-screen {
+            display: flex;
+            height: 100vh;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex-direction: column;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen">
+        <div class="spinner"></div>
+        <h2>Cargando Física App...</h2>
+        <p id="status">Iniciando...</p>
+    </div>
+
+    <!-- Cordova.js solo se carga si existe -->
+    <script>
+        // Función para actualizar el estado
+        function updateStatus(message) {
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.textContent = message;
+            }
+            console.log('📱 Status:', message);
+        }
+
+        // Detectar si es Cordova o navegador
+        const isCordova = typeof cordova !== 'undefined' || 
+                          document.URL.indexOf('http://') === -1 && 
+                          document.URL.indexOf('https://') === -1;
+        
+        if (isCordova) {
+            updateStatus('Cargando Cordova...');
+            // En Cordova, cargar el script dinámicamente
+            const script = document.createElement('script');
+            script.src = 'cordova.js';
+            script.onload = function() {
+                updateStatus('Cordova cargado, esperando device ready...');
+            };
+            script.onerror = function() {
+                updateStatus('Error al cargar Cordova');
+                console.error('No se pudo cargar cordova.js');
+                // Si falla, continuar de todas formas
+                setTimeout(initApp, 500);
+            };
+            document.head.appendChild(script);
+        } else {
+            updateStatus('Modo navegador');
+        }
+    </script>
+    
+    <!-- Scripts base -->
+    <script src="js/utils/Storage.js"></script>
+    <script src="js/config/constants.js"></script>
+    
+    <script>
+        function initApp() {
+            updateStatus('Verificando sesión...');
+            
+            try {
+                const token = localStorage.getItem('token');
+                
+                if (token && token !== "null" && token !== "undefined") {
+                    updateStatus('Sesión encontrada, redirigiendo...');
+                    console.log('✅ Token encontrado, redirigiendo a menu');
+                    setTimeout(() => {
+                        window.location.href = "pages/menu.html";
+                    }, 500);
+                } else {
+                    updateStatus('Sin sesión, redirigiendo a login...');
+                    console.log('❌ No hay token, redirigiendo a login');
+                    setTimeout(() => {
+                        window.location.href = "pages/login.html";
+                    }, 500);
+                }
+            } catch (e) {
+                console.error("Error al verificar sesión:", e);
+                updateStatus('Error, redirigiendo a login...');
+                setTimeout(() => {
+                    window.location.href = "pages/login.html";
+                }, 500);
+            }
+        }
+        
+        // Esperar a que todo esté listo
+        if (isCordova) {
+            // En Cordova, esperar deviceready
+            document.addEventListener("deviceready", function() {
+                updateStatus('Device ready!');
+                console.log("✅ Device ready");
+                initApp();
+            }, false);
+            
+            // Timeout de seguridad por si deviceready no se dispara
+            setTimeout(function() {
+                if (document.getElementById('status')) {
+                    console.warn('⚠️ Timeout esperando deviceready, continuando...');
+                    initApp();
+                }
+            }, 3000);
+        } else {
+            // En navegador, esperar DOMContentLoaded
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initApp);
+            } else {
+                initApp();
+            }
+        }
+    </script>
+</body>
+</html>

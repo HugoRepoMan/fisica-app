@@ -1,0 +1,152 @@
+/* BACKGROUND */
+.login-bg {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* WRAPPER */
+.login-wrapper {
+    max-width: 420px;
+    width: 100%;
+}
+
+/* HEADER */
+.login-header {
+    text-align: center;
+    margin-bottom: 32px;
+    color: white;
+}
+
+.login-logo {
+    background: white;
+    color: #4f46e5;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    font-size: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,.2);
+}
+
+.login-header h1 {
+    font-size: 36px;
+    margin-bottom: 6px;
+}
+
+.login-header p {
+    opacity: .9;
+}
+
+/* CARD */
+.login-card {
+    background: white;
+    border-radius: 28px;
+    padding: 32px;
+    box-shadow: 0 25px 50px rgba(0,0,0,.25);
+}
+
+/* TABS */
+.login-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.tab {
+    flex: 1;
+    padding: 14px;
+    border-radius: 16px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.tab.active {
+    background: #4f46e5;
+    color: white;
+}
+
+/* INPUTS */
+.field {
+    margin-bottom: 16px;
+}
+
+.field label {
+    font-size: 14px;
+    color: #374151;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.input-icon {
+    position: relative;
+}
+
+.input-icon span {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: .5;
+}
+
+.input-icon input {
+    width: 100%;
+    padding: 14px 14px 14px 44px;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    font-size: 14px;
+}
+
+.input-icon input:focus {
+    outline: none;
+    border-color: #6366f1;
+}
+
+/* BUTTON */
+.btn-primary {
+    width: 100%;
+    padding: 16px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 18px;
+    background: #4f46e5;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background: #4338ca;
+}
+
+/* OTHERS */
+.forgot {
+    text-align: center;
+    margin-top: 14px;
+    font-size: 13px;
+    color: #4f46e5;
+    cursor: pointer;
+}
+
+.terms {
+    text-align: center;
+    margin-top: 20px;
+    color: white;
+    font-size: 13px;
+}
+
+.hidden {
+    display: none;
+}

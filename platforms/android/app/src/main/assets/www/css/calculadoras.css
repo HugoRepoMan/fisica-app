@@ -1,0 +1,170 @@
+/* =========================
+   RESET + BASE
+========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f8fafc; /* Fondo suave */
+  color: #111827;
+}
+
+/* =========================
+   APP CONTENEDOR
+========================= */
+.app {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+}
+
+/* =========================
+   HEADER
+========================= */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.header h1 {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.back-btn {
+  background: white;
+  border: none;
+  border-radius: 12px;
+  padding: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
+}
+
+.back-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* =========================
+   SUBTÍTULO
+========================= */
+.subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+
+/* =========================
+   LISTA DE CARDS
+========================= */
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* =========================
+   CARD
+========================= */
+.card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 20px 30px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* =========================
+   ICONOS
+========================= */
+.icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-box svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Colores pastel */
+.icon-box.blue {
+  background: rgba(99, 102, 241, 0.15);
+  color: #4f46e5;
+}
+
+.icon-box.purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #9333ea;
+}
+
+.icon-box.pink {
+  background: rgba(236, 72, 153, 0.15);
+  color: #db2777;
+}
+
+/* =========================
+   CONTENIDO
+========================= */
+.card-content {
+  flex: 1;
+}
+
+.card-content h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.card-content p {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* =========================
+   LINK ABRIR
+========================= */
+.open-link {
+  position: absolute;
+  bottom: 20px;
+  right: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.open-link svg {
+  width: 16px;
+  height: 16px;
+}

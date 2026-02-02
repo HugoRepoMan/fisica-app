@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Rozamiento | Física App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="../css/calculator.css">
+<script src="../cordova.js"></script>
+<script src="../js/config/constants.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="calculator-bg">
+    <div class="container-mobile">
+        
+        <header class="calc-header">
+            <button class="back-btn-circle" onclick="history.back()">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <h1>Calculadora Fuerza de Rozamiento</h1>
+        </header>
+
+        <div class="mode-section">
+            <p class="mode-label">¿Qué deseas calcular?</p>
+            <div class="mode-buttons">
+                <button id="btn-force" class="mode-btn active" onclick="FrictionController.setMode('force')">Fuerza (Fr)</button>
+                <button id="btn-coeff" class="mode-btn" onclick="FrictionController.setMode('coefficient')">Coeficiente (μ)</button>
+                <button id="btn-normal" class="mode-btn" onclick="FrictionController.setMode('normal')">Normal (N)</button>
+            </div>
+        </div>
+
+        <div class="calc-card">
+            <div class="formula-header">
+                    <div>
+                        <span class="label-muted">Fórmula</span>
+                        <p class="formula-text" id="formula-display">Fr = μ × N</p>
+                    </div>
+                <div class="sigma-icon">Σ</div>
+            </div>
+
+            <div class="illustration-box">
+                <svg width="200" height="120" viewBox="0 0 200 120">
+                    <line x1="20" y1="100" x2="180" y2="100" stroke="#6b7280" stroke-width="2" />
+                    <rect x="70" y="50" width="60" height="50" fill="#6b7280" opacity="0.2" stroke="#6b7280" stroke-width="1" rx="4" />
+                    <line x1="100" y1="50" x2="100" y2="20" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-guide)" />
+                    <line x1="130" y1="75" x2="160" y2="75" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-guide)" />
+                    <defs>
+                        <marker id="arrow-guide" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                            <polygon points="0 0, 10 5, 0 10" fill="#6b7280" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <div class="inputs-group">
+                <div id="field-mu" class="input-field">
+                    <label>Coeficiente (μ)</label>
+                    <input type="number" id="input-mu" oninput="FrictionController.updateLive()" placeholder="ej. 0.40">
+                </div>
+                <div id="field-normal" class="input-field">
+                    <label>Normal (N) [N]</label>
+                    <input type="number" id="input-normal" oninput="FrictionController.updateLive()" placeholder="ej. 100">
+                </div>
+                <div id="field-force" class="input-field is-hidden">
+                    <label>Fuerza (Fr) [N]</label>
+                    <input type="number" id="input-force" oninput="FrictionController.updateLive()" placeholder="ej. 25">
+                </div>
+            </div>
+
+            <div class="result-section">
+                <div class="result-header">
+                    <span>Resultado:</span>
+                    <button class="clear-btn" onclick="FrictionController.clear()">
+                        <i data-lucide="refresh-ccw" style="width:14px"></i> Limpiar
+                    </button>
+                </div>
+                <p class="result-value" id="res-display">-- <span class="unit">N</span></p>
+            </div>
+        </div>
+
+        <button class="main-calc-btn" onclick="FrictionController.calculate()">Calcular</button>
+        
+        <button class="secondary-btn" onclick="FrictionController.toggleDiagram()">
+            <i data-lucide="network"></i>
+            <span id="txt-diagram">Ver Diagrama de Cuerpo Libre</span>
+        </button>
+
+        <div id="dcl-box" class="calc-card mt-5 is-hidden">
+            <h3 class="title is-5 mb-4">Diagrama de Cuerpo Libre (DCL)</h3>
+            <div id="svg-container" class="svg-wrapper"></div>
+            
+            <div class="dcl-legend-pro mt-4">
+                <p><span class="dot purple">●</span> <strong>Fr:</strong> Fuerza de fricción (opuesta al movimiento)</p>
+                <p><span class="dot orange">●</span> <strong>F:</strong> Fuerza aplicada</p>
+                <p><span class="dot cyan">●</span> <strong>N:</strong> Fuerza Normal (perpendicular a la superficie)</p>
+                <p><span class="dot red">●</span> <strong>P:</strong> Peso del objeto</p>
+            </div>
+        </div>
+
+    <script src="../js/controllers/FrictionController.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            FrictionController.init();
+        });
+    </script>
+</body>
+</html>

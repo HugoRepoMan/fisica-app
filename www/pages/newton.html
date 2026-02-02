@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Segunda Ley de Newton | Física App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="../css/calculator.css">
+<script src="../cordova.js"></script>
+<script src="../js/config/constants.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="calculator-bg">
+    <div class="container-mobile">
+        
+        <header class="calc-header">
+            <button class="back-btn-circle" onclick="history.back()">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <h1>Segunda Ley de Newton</h1>
+        </header>
+
+        <div class="mode-section">
+            <p class="mode-label">¿Qué deseas calcular?</p>
+            <div class="mode-buttons">
+                <button id="btn-force" class="mode-btn active" onclick="NewtonController.setMode('force')">Fuerza (F)</button>
+                <button id="btn-mass" class="mode-btn" onclick="NewtonController.setMode('mass')">Masa (m)</button>
+                <button id="btn-accel" class="mode-btn" onclick="NewtonController.setMode('acceleration')">Aceleración (a)</button>
+            </div>
+        </div>
+
+        <div class="calc-card shadow-soft">
+            <div class="formula-header">
+                <div>
+                    <span class="label-muted">Fórmula</span>
+                    <p class="formula-text" id="formula-display">F = m × a</p>
+                </div>
+                <div class="sigma-icon">Σ</div>
+            </div>
+
+            <div class="inputs-group">
+                <div id="field-mass" class="input-field">
+                    <label>Masa (kg)</label>
+                    <input type="number" id="input-mass" oninput="NewtonController.updateLive()" placeholder="ej. 10">
+                </div>
+                <div id="field-accel" class="input-field">
+                    <label>Aceleración (m/s²)</label>
+                    <input type="number" id="input-accel" oninput="NewtonController.updateLive()" placeholder="ej. 9.8">
+                </div>
+                <div id="field-force" class="input-field is-hidden">
+                    <label>Fuerza (N)</label>
+                    <input type="number" id="input-force" oninput="NewtonController.updateLive()" placeholder="ej. 98">
+                </div>
+            </div>
+
+            <div class="result-section">
+                <div class="result-header">
+                    <span>Resultado:</span>
+                    <button class="clear-btn" onclick="NewtonController.clear()">
+                        <i data-lucide="refresh-ccw" style="width:14px"></i> Limpiar
+                    </button>
+                </div>
+                <p class="result-value" id="res-display">-- <span class="unit">N</span></p>
+            </div>
+        </div>
+
+        <button class="main-calc-btn" onclick="NewtonController.calculate()">Calcular</button>
+        
+        <button class="secondary-btn" onclick="NewtonController.toggleDiagram()">
+            <i data-lucide="network"></i>
+            <span id="txt-diagram">Ver Diagrama de Cuerpo Libre</span>
+        </button>
+
+        <div id="dcl-box" class="calc-card mt-5 is-hidden">
+            <h3 class="subtitle is-6 mb-3">Diagrama de Cuerpo Libre (DCL)</h3>
+            <div id="svg-container" class="svg-wrapper"></div>
+            <div class="dcl-legend-pro mt-4">
+                <p><span class="dot blue">●</span> <strong>F:</strong> Fuerza aplicada horizontal</p>
+                <p><span class="dot red">●</span> <strong>P:</strong> Peso (m × g)</p>
+                <p><span class="dot green">●</span> <strong>N:</strong> Fuerza Normal</p>
+                <p><span class="dot yellow">●</span> <strong>a:</strong> Aceleración resultante</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/controllers/NewtonController.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            NewtonController.init();
+        });
+    </script>
+</body>
+</html>

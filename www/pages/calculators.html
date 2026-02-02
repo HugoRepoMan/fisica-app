@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadoras | Física App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="../cordova.js"></script>
+<script src="../js/config/constants.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <link rel="stylesheet" href="../css/calculadoras.css">
+</head>
+
+<body>
+
+  <main class="app">
+
+    <header class="header">
+      <button class="back-btn" onclick="goBack()">
+        <i data-lucide="chevron-left"></i>
+      </button>
+      <h1>Calculadoras</h1>
+    </header>
+
+    <p class="subtitle">
+      Selecciona una calculadora para resolver problemas de física
+    </p>
+
+    <section class="cards">
+
+      <article class="card" onclick="openCalculator('newton')">
+        <div class="icon-box blue">
+          <i data-lucide="flask-conical"></i>
+        </div>
+        <div class="card-content">
+          <h2>Segunda Ley de Newton</h2>
+          <p>Calcula fuerza, masa y aceleración (F = m × a)</p>
+        </div>
+        <span class="open-link">
+          Abrir <i data-lucide="arrow-right"></i>
+        </span>
+      </article>
+
+      <article class="card" onclick="openCalculator('friction')">
+        <div class="icon-box purple">
+          <i data-lucide="rotate-3d"></i>
+        </div>
+        <div class="card-content">
+          <h2>Fuerza de Fricción</h2>
+          <p>Calcula fricción, coeficiente y normal (Fr = μ × N)</p>
+        </div>
+        <span class="open-link">
+          Abrir <i data-lucide="arrow-right"></i>
+        </span>
+      </article>
+
+      <article class="card" onclick="openCalculator('weight')">
+        <div class="icon-box pink">
+          <i data-lucide="scale"></i>
+        </div>
+        <div class="card-content">
+          <h2>Peso</h2>
+          <p>Calcula peso, masa y gravedad (P = m × g)</p>
+        </div>
+        <span class="open-link">
+          Abrir <i data-lucide="arrow-right"></i>
+        </span>
+      </article>
+
+    </section>
+
+  </main>
+
+  <script src="../js/controllers/calculadoras.js"></script>
+
+<script>
+    // Esto asegura que los iconos se carguen correctamente
+    lucide.createIcons();
+</script>
+</body>
+</html>

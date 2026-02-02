@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.teamespe.fisica" version="2.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Fisica ESPE</name>
+    <description>
+        Aplicación oficial de aprendizaje de Física del Team ESPE.
+    </description>
+    <author email="ejmiagua1@espe.edu.ec" href="https://fisica-backend-pro.onrender.com">
+        Erick Maigua - Team ESPE
+    </author>
+    <content src="index.html" />
+    <icon src="res/icon.png" />
+    <access origin="*" />
+    <allow-navigation href="*" />
+    <allow-intent href="http:///" />
+    <allow-intent href="https:///" />
+    <preference name="loglevel" value="DEBUG" />
+    <preference name="Orientation" value="portrait" />
+    <preference name="android-minSdkVersion" value="24" />
+    <preference name="android-targetSdkVersion" value="35" />
+</widget>

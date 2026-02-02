@@ -1,0 +1,162 @@
+/* Paleta de Colores Figma y Variables */
+:root {
+    --indigo-primary: #6366f1;
+    --purple-secondary: #a855f7;
+    --bg-light: #f8faff;
+    --success-green: #22c55e;
+    --warning-yellow: #fbbf24;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #f1f5f9;
+}
+
+body {
+    background-color: var(--bg-light);
+    margin: 0;
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--text-main);
+}
+
+.app-container {
+    max-width: 450px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header y Botón Atrás Circular */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.back-circle-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid #e2e8f0;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease;
+}
+
+.back-circle-btn:active {
+    transform: scale(0.9);
+}
+
+.header-stats {
+    display: flex;
+    gap: 10px;
+}
+
+.stat-bubble {
+    background: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Card de Progreso Púrpura Interactiva */
+.progress-card-main {
+    background: linear-gradient(135deg, var(--indigo-primary), var(--purple-secondary));
+    border-radius: 24px;
+    padding: 24px;
+    color: white;
+    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
+    margin-bottom: 30px;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.progress-track {
+    background: rgba(255, 255, 255, 0.2);
+    height: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    background: white;
+    height: 100%;
+    border-radius: 10px;
+    width: 0%; /* Inicia en 0 para la animación interactiva */
+    transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ruta de Aprendizaje y Línea Vertical Conectora */
+.lesson-item {
+    position: relative;
+    padding-bottom: 30px;
+}
+
+/* Línea gris que une las lecciones */
+.lesson-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 36px; /* Ajustado al centro del círculo de estado */
+    top: 75px;
+    width: 2px;
+    height: calc(100% - 65px);
+    background: #e2e8f0;
+    z-index: 0;
+}
+
+.lesson-card {
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: 22px;
+    padding: 20px;
+    display: flex;
+    gap: 15px;
+    width: 100%;
+    text-align: left;
+    position: relative;
+    z-index: 1;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.lesson-card:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.lesson-card.completado { border-color: #dcfce7; }
+.lesson-card.desbloqueado { border-color: #e0e7ff; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08); }
+.lesson-card.bloqueado { opacity: 0.7; background: #f8fafc; cursor: not-allowed; }
+
+/* Círculos de Estado (Iconos) */
+.status-circle {
+    width: 55px;
+    height: 55px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.2rem;
+}
+
+.status-circle.completado { background: #dcfce7; color: #16a34a; }
+.status-circle.desbloqueado { background: #e0e7ff; color: var(--indigo-primary); }
+.status-circle.bloqueado { background: #f1f5f9; color: var(--text-muted); }
+
+/* Detalles de la Lección */
+.lesson-info h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.lesson-info p { margin: 5px 0; font-size: 0.9rem; color: var(--text-muted); line-height: 1.4; }
+.xp-badge { color: #d97706; font-weight: bold; font-size: 0.9rem; }
+.stars-row { color: var(--warning-yellow); margin-top: 5px; letter-spacing: 2px; }
