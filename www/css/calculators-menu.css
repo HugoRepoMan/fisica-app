@@ -1,0 +1,193 @@
+/* calculators-menu.css - Diseño basado en Figma */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: #f9fafb;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 448px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    min-height: 100vh;
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-button:hover {
+    background: white;
+}
+
+.icon-button svg {
+    width: 24px;
+    height: 24px;
+    color: #374151;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* Descripción */
+.description {
+    color: #4b5563;
+    font-size: 15px;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+/* Grid de calculadoras */
+.calculators-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Card de calculadora */
+.calculator-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    width: 100%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.calculator-card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.card-content {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+/* Círculo de icono */
+.icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.icon-circle svg {
+    width: 24px;
+    height: 24px;
+}
+
+.icon-circle.indigo {
+    background: #e0e7ff;
+    color: #4f46e5;
+}
+
+.icon-circle.cyan {
+    background: #cffafe;
+    color: #0891b2;
+}
+
+.icon-circle.yellow {
+    background: #fef3c7;
+    color: #ca8a04;
+}
+
+.icon-circle.emerald {
+    background: #d1fae5;
+    color: #059669;
+}
+
+/* Info del card */
+.card-info {
+    flex: 1;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.card-description {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+/* Footer del card */
+.card-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.open-text {
+    color: #4f46e5;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.open-text svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .container {
+        padding: 24px 16px;
+    }
+
+    .title {
+        font-size: 20px;
+    }
+
+    .calculator-card {
+        padding: 20px;
+    }
+
+    .card-title {
+        font-size: 15px;
+    }
+
+    .card-description {
+        font-size: 13px;
+    }
+}

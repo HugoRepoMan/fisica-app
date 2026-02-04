@@ -11,7 +11,21 @@ window.LessonDetailController = {
         const moduloId = window.Storage.get("current_modulo_id");
         console.log("📖 Módulo ID:", moduloId);
         
+        if (!moduloId) {
+            console.error("❌ No hay módulo seleccionado");
+            alert("Error: No se pudo cargar la lección");
+            window.location.href = "learning-path.html";
+            return;
+        }
+        
         this.lessonData = await this.obtenerDatosLeccion(moduloId);
+        
+        if (!this.lessonData) {
+            console.error("❌ No se pudieron cargar los datos de la lección");
+            alert("Error al cargar la lección. Usando contenido de respaldo.");
+            this.lessonData = this.getMockLesson();
+        }
+        
         this.totalSteps = this.lessonData.theory.length + this.lessonData.questions.length;
         this.totalPreguntas = this.lessonData.questions.length;
         this.aciertos = 0;
@@ -135,7 +149,6 @@ window.LessonDetailController = {
         console.log("🎉 [LessonDetail] Finalizando lección...");
         console.log(`📊 Aciertos: ${this.aciertos}/${this.totalPreguntas}`);
         
-        const moduloId = window.Storage.get("current_modulo_id");
         const puntaje = this.aciertos;
         const totalPreguntas = this.totalPreguntas;
         
@@ -149,10 +162,7 @@ window.LessonDetailController = {
             }
 
             console.log("📡 Enviando progreso al backend...");
-            console.log({
-                puntaje,
-                total_preguntas: totalPreguntas
-            });
+            console.log({ puntaje, total_preguntas: totalPreguntas });
 
             const response = await fetch(`${window.CONFIG.API_URL}/progreso/completar`, {
                 method: "POST",
@@ -175,17 +185,25 @@ window.LessonDetailController = {
             const data = await response.json();
             console.log("✅ Respuesta del backend:", data);
 
-            // Actualizar datos locales con la respuesta del backend
+            // CRÍTICO: Actualizar lecciones_completadas
             if (data.resumen) {
                 const userData = window.Storage.get("user_data") || {};
                 
-                // Actualizar con los datos del backend
+                // Actualizar TODOS los campos del resumen
                 userData.xp = data.resumen.nuevo_total_xp || userData.xp || 0;
                 userData.nivel = data.resumen.nuevo_nivel || userData.nivel || 1;
                 userData.energia = data.resumen.nueva_energia || userData.energia || 5;
                 
+                // CRÍTICO: Incrementar lecciones completadas
+                if (userData.lecciones_completadas !== undefined) {
+                    userData.lecciones_completadas++;
+                } else {
+                    userData.lecciones_completadas = 1;
+                }
+                
                 window.Storage.set("user_data", userData);
                 console.log("✅ Datos actualizados:", userData);
+                console.log(`📚 Lecciones completadas: ${userData.lecciones_completadas}`);
             }
 
             // Mostrar mensaje de éxito
@@ -216,8 +234,49 @@ window.LessonDetailController = {
     },
 
     async obtenerDatosLeccion(id) {
-        // Aquí podrías cargar la lección desde el backend
-        // Por ahora, datos de ejemplo
+        try {
+            console.log(`📡 [LessonDetail] Cargando lección ${id} desde backend...`);
+            
+            const token = window.Storage.get("token");
+            if (!token) {
+                console.warn("⚠️ No hay token, usando datos de respaldo");
+                return this.getMockLesson();
+            }
+
+            // Intentar cargar desde el backend
+            const response = await fetch(`${window.CONFIG.API_URL}/content/leccion/${id}`, {
+                method: "GET",
+                headers: {
+                    "x-auth-token": token,
+                    "Content-Type": "application/json"
+                }
+            });
+
+            if (!response.ok) {
+                console.warn(`⚠️ Endpoint /content/leccion/${id} no disponible (${response.status})`);
+                console.log("📚 Usando datos de respaldo");
+                return this.getMockLesson();
+            }
+
+            const leccionData = await response.json();
+            console.log("✅ [LessonDetail] Lección cargada desde backend:", leccionData);
+            
+            // Validar que tenga la estructura correcta
+            if (leccionData.theory && leccionData.questions) {
+                return leccionData;
+            } else {
+                console.warn("⚠️ Estructura de lección inválida");
+                return this.getMockLesson();
+            }
+
+        } catch (error) {
+            console.error("❌ Error al cargar lección:", error);
+            console.log("📚 Usando datos de respaldo");
+            return this.getMockLesson();
+        }
+    },
+
+    getMockLesson() {
         return {
             theory: [
                 { 

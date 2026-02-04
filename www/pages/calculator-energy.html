@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energía y Trabajo</title>
+    <link rel="stylesheet" href="../css/calculator-shared.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <button class="icon-btn" onclick="goBack()"><i data-lucide="chevron-left"></i></button>
+            <h1 class="title">Energía y Trabajo</h1>
+        </header>
+        <div class="tabs">
+            <button class="tab active" onclick="setMode('kinetic')">Cinética</button>
+            <button class="tab" onclick="setMode('potential')">Potencial</button>
+            <button class="tab" onclick="setMode('work')">Trabajo</button>
+        </div>
+        <div class="main-card">
+            <div class="formula-section">
+                <div><p class="formula-label">Fórmula</p><p class="formula-text" id="formula">Ec = ½mv²</p></div>
+                <div class="formula-icon yellow"><i data-lucide="zap"></i></div>
+            </div>
+            <div id="inputs"></div>
+            <div class="button-group">
+                <button class="btn btn-primary yellow" onclick="calculate()"><i data-lucide="calculator"></i>Calcular</button>
+                <button class="btn btn-secondary" onclick="clearAll()"><i data-lucide="x"></i>Limpiar</button>
+            </div>
+        </div>
+        <div id="results" class="results-card hidden"></div>
+    </div>
+    <script src="../cordova.js"></script>
+    <script src="../js/calculator-energy.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

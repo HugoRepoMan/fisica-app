@@ -1,60 +1,37 @@
-/**
- * ProfileController - CORREGIDO TOTALMENTE
- * Gestiona estadísticas reales, niveles y logros desde el Backend.
- */
-
 window.ProfileController = {
     async init() {
-        console.log("🔄 Cargando perfil del usuario...");
+        console.log("🔄 [ProfileController] Inicializando...");
         
         try {
-            // Sincronizar datos frescos desde el backend
             await this.sincronizarPerfil();
 
-            // Obtener datos actualizados del almacenamiento local
-            const user = window.Storage.get("user_data") || { 
-                xp: 0, 
-                racha: 0, 
-                nivel: 1, 
-                lecciones_completadas: 0, 
-                precision: 0 
-            };
+            const user = window.Storage.get("user_data") || {};
             const rawName = window.Storage.get("userName") || "Estudiante";
             
-            // Limpieza de nombre
-            const cleanName = typeof rawName === 'string' ? 
-                rawName.replace(/['"]+/g, '').trim() : rawName;
+            const cleanName = String(rawName).replace(/['"]+/g, '').trim();
 
-            // Renderizar nombre
             const userNameEl = document.getElementById("userName");
             if (userNameEl) userNameEl.textContent = cleanName;
 
-            // Renderizar estadísticas
-            const stats = document.querySelectorAll(".stat-card strong");
-            if (stats.length >= 4) {
-                // CORRECCIÓN: Uso de backticks para interpolación de strings
-                stats[0].textContent = `${user.racha || 0} días`;
-                stats[1].textContent = `${user.lecciones_completadas || 0}`;
-                stats[2].textContent = `${user.precision || 0}%`;
-                stats[3].textContent = `${user.xp || 0}`;
-            }
-
-            // Renderizar barra de progreso
+            this.renderEstadisticas(user);
             this.renderProgressBar(user);
-
-            // Renderizar logros
-            this.renderAchievements(user.logros || []);
+            await this.renderAchievements(user.logros || []);
             
-            console.log("✅ Perfil cargado correctamente");
+            console.log("✅ [ProfileController] Perfil cargado correctamente");
         } catch (error) {
-            console.error("❌ Error al cargar perfil:", error);
-            // Solo alertar si es un error crítico de lógica, no de red silenciosa
+            console.error("❌ [ProfileController] Error:", error);
+            
+            // Intentar renderizar con datos locales aunque falle el backend
+            const user = window.Storage.get("user_data") || {};
+            this.renderEstadisticas(user);
+            this.renderProgressBar(user);
+            this.renderAchievements(user.logros || []);
         }
     },
 
     async sincronizarPerfil() {
         try {
-            console.log("📡 Sincronizando perfil con backend...");
+            console.log("📡 [ProfileController] Sincronizando con backend...");
             
             const token = window.Storage.get("token");
             if (!token) {
@@ -62,7 +39,6 @@ window.ProfileController = {
                 return;
             }
 
-            // CORRECCIÓN: URL envuelta en backticks
             const response = await fetch(`${window.CONFIG.API_URL}/usuario/perfil`, {
                 method: "GET",
                 headers: {
@@ -72,37 +48,62 @@ window.ProfileController = {
             });
 
             if (!response.ok) {
-                // CORRECCIÓN: Error message envuelto en backticks
                 throw new Error(`HTTP ${response.status}`);
             }
 
-            const data = await response.json();
-            console.log("📥 Datos recibidos:", data);
+            let result = await response.json();
+            console.log("📥 [ProfileController] Respuesta backend:", result);
 
+            // MANEJO ROBUSTO: Puede venir en diferentes formatos
+            let data = result.data || result.usuario || result;
+
+            // EXTRACCIÓN SEGURA de todos los campos posibles
             const datosSincronizados = {
                 id: data.id,
-                nombre: data.nombre,
+                nombre: data.nombre || data.name || "Estudiante",
                 email: data.email,
-                xp: data.xp || 0,
-                racha: data.racha || 0,
-                nivel: data.nivel || 1,
-                vidas: data.vidas || 5,
-                energia: data.energia || 5,
-                lecciones_completadas: data.lecciones_completadas || 0,
-                total_aciertos: data.total_aciertos || 0,
-                total_intentos: data.total_intentos || 0,
-                precision: data.total_intentos > 0 ? 
-                    Math.round((data.total_aciertos / data.total_intentos) * 100) : 0,
-                logros: data.logros || []
+                xp: parseInt(data.xp || data.xp_actual || data.experiencia || 0),
+                racha: parseInt(data.racha || data.streak || 0),
+                nivel: parseInt(data.nivel || data.level || 1),
+                vidas: data.vidas !== undefined ? parseInt(data.vidas) : 5,
+                energia: data.energia !== undefined ? parseInt(data.energia) : 5,
+                lecciones_completadas: parseInt(data.lecciones_completadas || data.completed_lessons || 0),
+                total_aciertos: parseInt(data.total_aciertos || data.correct_answers || 0),
+                total_intentos: parseInt(data.total_intentos || data.total_attempts || 0),
+                logros: Array.isArray(data.logros) ? data.logros : 
+                       Array.isArray(data.achievements) ? data.achievements : []
             };
 
+            // Calcular precisión
+            if (datosSincronizados.total_intentos > 0) {
+                datosSincronizados.precision = Math.round(
+                    (datosSincronizados.total_aciertos / datosSincronizados.total_intentos) * 100
+                );
+            } else {
+                datosSincronizados.precision = 0;
+            }
+
             window.Storage.set("user_data", datosSincronizados);
-            window.Storage.set("userName", data.nombre || "Estudiante");
+            window.Storage.set("userName", datosSincronizados.nombre);
             
-            console.log("✅ Datos sincronizados:", datosSincronizados);
+            console.log("✅ [ProfileController] Datos sincronizados:", datosSincronizados);
         } catch (error) {
-            console.error("❌ Error al sincronizar perfil:", error);
+            console.error("❌ [ProfileController] Error al sincronizar:", error);
             throw error;
+        }
+    },
+
+    renderEstadisticas(user) {
+        console.log("📊 [ProfileController] Renderizando estadísticas");
+
+        const stats = document.querySelectorAll(".stat-card strong");
+        if (stats.length >= 4) {
+            stats[0].textContent = `${user.racha || 0} días`;
+            stats[1].textContent = `${user.lecciones_completadas || 0}`;
+            stats[2].textContent = `${user.precision || 0}%`;
+            stats[3].textContent = `${user.xp || 0}`;
+        } else {
+            console.warn("⚠️ No se encontraron 4 stat-cards");
         }
     },
 
@@ -111,62 +112,122 @@ window.ProfileController = {
         const xpStatusText = document.getElementById("xpStatusText");
         const levelDisplay = document.getElementById("userLevelDisplay");
 
-        const xpActual = user.xp || 0;
-        const nivel = user.nivel || 1;
-        const xpPorNivel = 200; 
+        const xpActual = parseInt(user.xp || 0);
+        const nivel = parseInt(user.nivel || 1);
+        const xpPorNivel = 200;
         const xpEnEsteNivel = xpActual % xpPorNivel;
         const porcentaje = Math.min((xpEnEsteNivel / xpPorNivel) * 100, 100);
         
         if (levelDisplay) {
-            // CORRECCIÓN: Template literal
             levelDisplay.textContent = `Nivel ${nivel}`;
         }
         
         if (xpStatusText) {
             const xpRestante = xpPorNivel - xpEnEsteNivel;
-            // CORRECCIÓN: Template literal
             xpStatusText.textContent = `${xpEnEsteNivel} / ${xpPorNivel} XP (${xpRestante} XP para nivel ${nivel + 1})`;
         }
 
         if (progressFill) {
             setTimeout(() => {
-                // CORRECCIÓN: Template literal para estilo CSS
                 progressFill.style.width = `${porcentaje}%`;
             }, 200);
         }
     },
 
-    renderAchievements(userLogros) {
-        const container = document.querySelector(".achievements");
-        if (!container) return;
+    async renderAchievements(userLogros) {
+        console.log("🏆 [ProfileController] Renderizando logros");
+        console.log("Logros del usuario:", userLogros);
 
-        const todosLosLogros = [
-            { id: 1, emoji: '🎓', titulo: 'Primer Paso', desc: 'Completaste tu primera lección' },
-            { id: 4, emoji: '🔥', titulo: 'Racha de Fuego', desc: 'Mantén una racha de 7 días' },
-            { id: 3, emoji: '🍎', titulo: 'Maestro Newton', desc: 'Completa mecánica clásica' },
-            { id: 7, emoji: '⭐', titulo: 'Perfeccionista', desc: '3 estrellas en 10 lecciones' }
-        ];
+        const container = document.querySelector(".achievements");
+        if (!container) {
+            console.warn("⚠️ No se encontró contenedor .achievements");
+            return;
+        }
+
+        // Intentar obtener logros del backend
+        let todosLosLogros = await this.obtenerLogrosDisponibles();
+
+        // Si no se pudieron obtener, usar lista por defecto
+        if (!todosLosLogros || todosLosLogros.length === 0) {
+            console.log("⚠️ Usando logros por defecto");
+            todosLosLogros = [
+                { id: 1, emoji: '🎓', titulo: 'Primer Paso', descripcion: 'Completaste tu primera lección' },
+                { id: 2, emoji: '📚', titulo: 'Estudiante Dedicado', descripcion: 'Completa 5 lecciones' },
+                { id: 3, emoji: '🍎', titulo: 'Maestro Newton', descripcion: 'Domina las leyes de Newton' },
+                { id: 4, emoji: '🔥', titulo: 'Racha de Fuego', descripcion: '7 días consecutivos' },
+                { id: 5, emoji: '🧮', titulo: 'Calculador Pro', descripcion: '50 cálculos correctos' },
+                { id: 6, emoji: '🧠', titulo: 'Genio de la Física', descripcion: '95% de precisión' },
+                { id: 7, emoji: '⭐', titulo: 'Estrella Brillante', descripcion: 'Alcanza el nivel 10' }
+            ];
+        }
 
         const title = container.querySelector("h3");
         container.innerHTML = "";
         if (title) container.appendChild(title);
 
         todosLosLogros.forEach(logro => {
-            const esCompletado = userLogros.includes(logro.id);
+            // Verificar si el usuario tiene este logro (manejar ambos formatos)
+            const logroId = logro.id || logro.logro_id;
+            const esCompletado = userLogros.includes(logroId) || 
+                                userLogros.some(l => l.id === logroId || l === logroId);
+            
             const div = document.createElement("div");
-            // CORRECCIÓN: Template literal para clases dinámicas
             div.className = `achievement ${esCompletado ? 'completed' : 'locked'}`;
             
             div.innerHTML = `
-                <span class="emoji">${logro.emoji}</span>
-                <div>
-                    <strong>${logro.titulo}</strong>
-                    <p>${logro.desc}</p>
+                <span class="emoji" style="font-size: 28px;">${logro.emoji || logro.icono || '🏆'}</span>
+                <div style="flex: 1;">
+                    <strong style="display: block; margin-bottom: 4px;">${logro.titulo || logro.title}</strong>
+                    <p style="margin: 0; font-size: 13px; color: #64748b;">${logro.descripcion || logro.description || logro.desc}</p>
                 </div>
-                ${esCompletado ? '<span class="check">✔</span>' : ''}
+                ${esCompletado ? '<span class="check" style="color: #10b981; font-size: 20px;">✔</span>' : ''}
             `;
+            
             container.appendChild(div);
         });
+
+        console.log(`✅ [ProfileController] ${todosLosLogros.length} logros renderizados`);
+    },
+
+    async obtenerLogrosDisponibles() {
+        try {
+            const token = window.Storage.get("token");
+            if (!token) {
+                console.warn("⚠️ No hay token para obtener logros");
+                return null;
+            }
+
+            // Intentar endpoint /usuario/logros
+            const response = await fetch(`${window.CONFIG.API_URL}/usuario/logros`, {
+                method: "GET",
+                headers: {
+                    "x-auth-token": token,
+                    "Content-Type": "application/json"
+                }
+            });
+
+            if (!response.ok) {
+                console.warn(`⚠️ Endpoint /usuario/logros no disponible (${response.status})`);
+                return null;
+            }
+
+            const logros = await response.json();
+            console.log("📥 [ProfileController] Logros del backend:", logros);
+            
+            // Manejar diferentes formatos de respuesta
+            if (Array.isArray(logros)) {
+                return logros;
+            } else if (logros.data && Array.isArray(logros.data)) {
+                return logros.data;
+            } else if (logros.logros && Array.isArray(logros.logros)) {
+                return logros.logros;
+            }
+            
+            return null;
+        } catch (error) {
+            console.warn("⚠️ [ProfileController] Error obteniendo logros:", error.message);
+            return null;
+        }
     },
 
     logout() {
@@ -177,11 +238,14 @@ window.ProfileController = {
     }
 };
 
-// Inicialización
 document.addEventListener("DOMContentLoaded", () => {
-    if (window.ProfileController) window.ProfileController.init();
+    if (window.ProfileController) {
+        window.ProfileController.init();
+    }
 });
 
 document.addEventListener("deviceready", () => {
-    if (window.ProfileController) window.ProfileController.init();
+    if (window.ProfileController) {
+        window.ProfileController.init();
+    }
 }, false);

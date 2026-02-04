@@ -1,86 +1,118 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Calculadoras | Física App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-<script src="../cordova.js"></script>
-<script src="../js/config/constants.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <link rel="stylesheet" href="../css/calculadoras.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadoras de Física</title>
+    <link rel="stylesheet" href="../css/calculators-menu.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-
 <body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <button class="icon-button" onclick="goBack()">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <h1 class="title">Calculadoras</h1>
+        </header>
 
-  <main class="app">
+        <!-- Descripción -->
+        <p class="description">Selecciona una calculadora para resolver problemas de física</p>
 
-    <header class="header">
-      <button class="back-btn" onclick="goBack()">
-        <i data-lucide="chevron-left"></i>
-      </button>
-      <h1>Calculadoras</h1>
-    </header>
+        <!-- Lista de Calculadoras -->
+        <div class="calculators-grid">
+            <!-- Fuerzas y Dinámica -->
+            <button class="calculator-card" onclick="openCalculator('unified')">
+                <div class="card-content">
+                    <div class="icon-circle indigo">
+                        <i data-lucide="calculator"></i>
+                    </div>
+                    <div class="card-info">
+                        <h2 class="card-title">Fuerzas y Dinámica</h2>
+                        <p class="card-description">
+                            Calculadora unificada con plano configurable (horizontal/inclinado), opción de rozamiento y dirección de movimiento
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="open-text">
+                        Abrir
+                        <i data-lucide="arrow-right"></i>
+                    </span>
+                </div>
+            </button>
 
-    <p class="subtitle">
-      Selecciona una calculadora para resolver problemas de física
-    </p>
+            <!-- Cinemática -->
+            <button class="calculator-card" onclick="openCalculator('kinematics')">
+                <div class="card-content">
+                    <div class="icon-circle cyan">
+                        <i data-lucide="trending-up"></i>
+                    </div>
+                    <div class="card-info">
+                        <h2 class="card-title">Cinemática (MRU y MRUV)</h2>
+                        <p class="card-description">
+                            Calcula velocidad, distancia, tiempo y aceleración para movimiento rectilíneo uniforme y acelerado
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="open-text">
+                        Abrir
+                        <i data-lucide="arrow-right"></i>
+                    </span>
+                </div>
+            </button>
 
-    <section class="cards">
+            <!-- Energía y Trabajo -->
+            <button class="calculator-card" onclick="openCalculator('energy')">
+                <div class="card-content">
+                    <div class="icon-circle yellow">
+                        <i data-lucide="zap"></i>
+                    </div>
+                    <div class="card-info">
+                        <h2 class="card-title">Energía y Trabajo</h2>
+                        <p class="card-description">
+                            Calcula energía cinética, energía potencial gravitatoria y trabajo mecánico
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="open-text">
+                        Abrir
+                        <i data-lucide="arrow-right"></i>
+                    </span>
+                </div>
+            </button>
 
-      <article class="card" onclick="openCalculator('newton')">
-        <div class="icon-box blue">
-          <i data-lucide="flask-conical"></i>
+            <!-- Impulso y Momentum -->
+            <button class="calculator-card" onclick="openCalculator('momentum')">
+                <div class="card-content">
+                    <div class="icon-circle emerald">
+                        <i data-lucide="target"></i>
+                    </div>
+                    <div class="card-info">
+                        <h2 class="card-title">Impulso y Momentum</h2>
+                        <p class="card-description">
+                            Calcula momentum lineal, impulso y analiza colisiones inelásticas
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="open-text">
+                        Abrir
+                        <i data-lucide="arrow-right"></i>
+                    </span>
+                </div>
+            </button>
         </div>
-        <div class="card-content">
-          <h2>Segunda Ley de Newton</h2>
-          <p>Calcula fuerza, masa y aceleración (F = m × a)</p>
-        </div>
-        <span class="open-link">
-          Abrir <i data-lucide="arrow-right"></i>
-        </span>
-      </article>
+    </div>
 
-      <article class="card" onclick="openCalculator('friction')">
-        <div class="icon-box purple">
-          <i data-lucide="rotate-3d"></i>
-        </div>
-        <div class="card-content">
-          <h2>Fuerza de Fricción</h2>
-          <p>Calcula fricción, coeficiente y normal (Fr = μ × N)</p>
-        </div>
-        <span class="open-link">
-          Abrir <i data-lucide="arrow-right"></i>
-        </span>
-      </article>
-
-      <article class="card" onclick="openCalculator('weight')">
-        <div class="icon-box pink">
-          <i data-lucide="scale"></i>
-        </div>
-        <div class="card-content">
-          <h2>Peso</h2>
-          <p>Calcula peso, masa y gravedad (P = m × g)</p>
-        </div>
-        <span class="open-link">
-          Abrir <i data-lucide="arrow-right"></i>
-        </span>
-      </article>
-
-    </section>
-
-  </main>
-
-  <script src="../js/controllers/calculadoras.js"></script>
-
-<script>
-    // Esto asegura que los iconos se carguen correctamente
-    lucide.createIcons();
-</script>
+    <script src="../cordova.js"></script>
+    <script src="../js/calculators-menu.js"></script>
+    <script>
+        // Inicializar iconos de Lucide
+        lucide.createIcons();
+    </script>
 </body>
 </html>

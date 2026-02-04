@@ -4,28 +4,16 @@ window.LearningPathController = {
         console.log("🚀 [LearningPath] INIT");
 
         try {
-            // Primero renderizar con datos locales mientras carga
             this.renderHeaderFromLocalStorage();
-
-            // Luego sincronizar con el backend
             await this.sincronizarDatosDesdeBD();
-            
-            // Actualizar header con datos frescos
             this.renderHeaderFromLocalStorage();
 
-            // Cargar módulos/lecciones
-            let modulos = await window.ContentService.getRutaAprendizaje();
-
-            if (!modulos || !Array.isArray(modulos) || modulos.length === 0) {
-                console.warn("⚠️ No se pudieron cargar módulos del backend, usando datos de respaldo");
-                modulos = this.getMockData();
-            }
-
+            let modulos = await this.cargarModulos();
+            modulos = this.aplicarLogicaDesbloqueo(modulos);
             this.renderPath(modulos);
 
         } catch (e) {
             console.error("❌ ERROR INIT:", e);
-            // En caso de error, usar datos de respaldo
             this.renderHeaderFromLocalStorage();
             this.renderPath(this.getMockData());
         }
@@ -33,13 +21,11 @@ window.LearningPathController = {
 
     async sincronizarDatosDesdeBD() {
         try {
-            console.log("🔄 [LearningPath] Sincronizando datos del usuario...");
+            console.log("🔄 [LearningPath] Sincronizando datos...");
             
-            // Llamar a UserService.getProfile o endpoint similar
-            // Basándome en tu backend, usaría:
             const token = window.Storage.get("token");
             if (!token) {
-                console.warn("⚠️ No hay token, no se puede sincronizar");
+                console.warn("⚠️ No hay token");
                 return;
             }
 
@@ -52,60 +38,111 @@ window.LearningPathController = {
             });
 
             if (!response.ok) {
-                console.warn("⚠️ Error al obtener perfil:", response.status);
+                console.warn(`⚠️ Error HTTP ${response.status}`);
                 return;
             }
 
-            const result = await response.json();
-            console.log("📥 [LearningPath] Perfil recibido:", result);
+            let result = await response.json();
+            console.log("📥 [LearningPath] Respuesta backend:", result);
 
-            // Según tu backend, la respuesta podría ser directa o en result.data
-            const userData = result;
+            // MANEJO ROBUSTO: Puede venir en result.data, result.usuario, o directamente
+            let userData = result.data || result.usuario || result;
 
-            if (userData) {
-                // Actualizar user_data en localStorage
-                window.Storage.set("user_data", {
-                    id: userData.id,
-                    nombre: userData.nombre,
-                    email: userData.email,
-                    nivel: userData.nivel || 1,
-                    xp: userData.xp || 0,
-                    racha: userData.racha || 0,
-                    vidas: userData.vidas !== undefined ? userData.vidas : 5,
-                    energia: userData.energia !== undefined ? userData.energia : 5,
-                    logros: userData.logros || []
-                });
+            // MANEJO ROBUSTO: Extraer campos de forma segura
+            const datosActualizados = {
+                id: userData.id,
+                nombre: userData.nombre || userData.name || "Estudiante",
+                email: userData.email,
+                nivel: parseInt(userData.nivel || userData.level || 1),
+                xp: parseInt(userData.xp || userData.xp_actual || userData.experiencia || 0),
+                racha: parseInt(userData.racha || userData.streak || 0),
+                vidas: userData.vidas !== undefined ? parseInt(userData.vidas) : 5,
+                energia: userData.energia !== undefined ? parseInt(userData.energia) : 5,
+                lecciones_completadas: parseInt(userData.lecciones_completadas || userData.completed_lessons || 0),
+                total_aciertos: parseInt(userData.total_aciertos || userData.correct_answers || 0),
+                total_intentos: parseInt(userData.total_intentos || userData.total_attempts || 0),
+                logros: Array.isArray(userData.logros) ? userData.logros : 
+                       Array.isArray(userData.achievements) ? userData.achievements : []
+            };
 
-                window.Storage.set("userName", userData.nombre || "Estudiante");
-                console.log("✅ [LearningPath] Datos sincronizados");
+            window.Storage.set("user_data", datosActualizados);
+            window.Storage.set("userName", datosActualizados.nombre);
+            
+            console.log("✅ [LearningPath] Datos sincronizados:", datosActualizados);
+        } catch (e) {
+            console.error("❌ Error sincronizando:", e.message);
+        }
+    },
+
+    async cargarModulos() {
+        try {
+            console.log("📚 [LearningPath] Cargando módulos del backend...");
+            
+            let modulos = await window.ContentService.getRutaAprendizaje();
+            
+            // Si ContentService devuelve null o vacío
+            if (!modulos || !Array.isArray(modulos) || modulos.length === 0) {
+                console.warn("⚠️ Backend no devolvió módulos, usando mock data");
+                return this.getMockData();
             }
 
+            console.log(`✅ [LearningPath] ${modulos.length} módulos cargados del backend`);
+            return modulos;
+            
         } catch (e) {
-            console.error("❌ Error sincronizando:", e);
+            console.error("❌ Error cargando módulos:", e);
+            return this.getMockData();
         }
+    },
+
+    aplicarLogicaDesbloqueo(modulos) {
+        const userData = window.Storage.get("user_data") || {};
+        const leccionesCompletadas = parseInt(userData.lecciones_completadas || 0);
+        
+        console.log(`🔓 [LearningPath] Aplicando lógica de desbloqueo...`);
+        console.log(`📊 Lecciones completadas: ${leccionesCompletadas}`);
+
+        return modulos.map((modulo, index) => {
+            let estado;
+            
+            if (index === 0) {
+                // Primera lección
+                estado = leccionesCompletadas > 0 ? 'completado' : 'desbloqueado';
+            } else {
+                // Lecciones siguientes
+                if (leccionesCompletadas > index) {
+                    estado = 'completado';
+                } else if (leccionesCompletadas === index) {
+                    estado = 'desbloqueado';
+                } else {
+                    estado = 'bloqueado';
+                }
+            }
+            
+            console.log(`  Módulo ${index + 1} (${modulo.titulo}): ${estado}`);
+            
+            return {
+                ...modulo,
+                estado: estado
+            };
+        });
     },
 
     renderHeaderFromLocalStorage() {
         const userData = window.Storage.get("user_data") || {};
         const userName = window.Storage.get("userName") || "Estudiante";
 
-        console.log("🎨 [LearningPath] Renderizando header:", { userData, userName });
+        console.log("🎨 [LearningPath] Renderizando header");
 
         const set = (id, val) => {
             const el = document.getElementById(id);
             if (el) {
                 el.textContent = val;
-            } else {
-                console.warn(`⚠️ Elemento #${id} no encontrado`);
             }
         };
 
-        // Limpiar nombre
-        let cleanName = userName;
-        if (typeof cleanName === 'string') {
-            cleanName = cleanName.replace(/['"]+/g, '').trim();
-            cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
-        }
+        let cleanName = String(userName).replace(/['"]+/g, '').trim();
+        cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
 
         set("welcomeGreeting", `¡Hola, ${cleanName}!`);
         set("totalXPText", userData.xp || 0);
@@ -114,26 +151,21 @@ window.LearningPathController = {
         set("energyCount", userData.energia !== undefined ? userData.energia : 5);
 
         const nivelEl = document.getElementById("userLevelDisplay");
-        if (nivelEl) {
-            nivelEl.textContent = `Nivel ${userData.nivel || 1}`;
-        }
+        if (nivelEl) nivelEl.textContent = `Nivel ${userData.nivel || 1}`;
 
-        // Barra de progreso
         this.renderProgressBar(userData);
     },
 
     renderProgressBar(userData) {
-        const xpActual = userData.xp || 0;
-        const nivel = userData.nivel || 1;
-        
-        // XP necesario para el siguiente nivel (puedes ajustar esta fórmula)
-        const xpParaSiguienteNivel = nivel * 200; // 200 XP por nivel
+        const xpActual = parseInt(userData.xp || 0);
+        const nivel = parseInt(userData.nivel || 1);
+        const xpParaSiguienteNivel = nivel * 200;
         const xpEnEsteNivel = xpActual % xpParaSiguienteNivel;
         const porcentaje = (xpEnEsteNivel / xpParaSiguienteNivel) * 100;
 
         const progressFill = document.getElementById("progressFill");
         if (progressFill) {
-            progressFill.style.width = `${Math.min(porcentaje, 100)}%`;
+            progressFill.style.width = `${Math.min(Math.max(porcentaje, 0), 100)}%`;
         }
 
         const xpStatusText = document.getElementById("xpStatusText");
@@ -150,7 +182,7 @@ window.LearningPathController = {
             return;
         }
 
-        console.log("🎨 [LearningPath] Renderizando", modulos.length, "módulos");
+        console.log(`🎨 [LearningPath] Renderizando ${modulos.length} módulos`);
 
         container.innerHTML = "";
 
@@ -159,7 +191,6 @@ window.LearningPathController = {
                 <div style="text-align: center; padding: 40px; color: #64748b;">
                     <p style="font-size: 18px; margin-bottom: 10px;">📚</p>
                     <p>No hay módulos disponibles</p>
-                    <p style="font-size: 14px; margin-top: 8px;">Intenta recargar la página</p>
                 </div>
             `;
             return;
@@ -169,17 +200,19 @@ window.LearningPathController = {
             const card = document.createElement("div");
             card.className = "lesson-card";
             
-            // Estados: desbloqueado, bloqueado, completado
-            const estado = modulo.estado || (index === 0 ? 'desbloqueado' : 'bloqueado');
+            const estado = modulo.estado || 'bloqueado';
             
-            if (estado === 'bloqueado') {
-                card.classList.add('locked');
-            } else if (estado === 'completado') {
-                card.classList.add('completed');
-            }
+            if (estado === 'bloqueado') card.classList.add('locked');
+            if (estado === 'completado') card.classList.add('completed');
 
             const icono = estado === 'completado' ? '✅' : 
                          estado === 'bloqueado' ? '🔒' : '📖';
+            
+            const estadoTexto = estado === 'completado' ? 
+                '<span style="color: #10b981; font-size: 12px; font-weight: 600;">✓ Completado</span>' :
+                estado === 'bloqueado' ? 
+                '<span style="color: #94a3b8; font-size: 12px;">🔒 Completa la lección anterior</span>' :
+                '<span style="color: #3b82f6; font-size: 12px; font-weight: 600;">📖 Disponible</span>';
 
             card.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 16px;">
@@ -188,19 +221,22 @@ window.LearningPathController = {
                         <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 600;">
                             ${modulo.titulo || 'Módulo ' + (index + 1)}
                         </h3>
-                        <p style="margin: 0; font-size: 14px; color: #64748b;">
+                        <p style="margin: 0 0 4px 0; font-size: 14px; color: #64748b;">
                             ${modulo.descripcion || 'Sin descripción'}
                         </p>
+                        ${estadoTexto}
                         ${modulo.xp ? `<p style="margin: 4px 0 0 0; font-size: 12px; color: #059669; font-weight: 600;">+${modulo.xp} XP</p>` : ''}
                     </div>
                 </div>
             `;
 
-            // Click handler
             if (estado !== 'bloqueado') {
                 card.style.cursor = 'pointer';
+                card.addEventListener('click', () => this.abrirModulo(modulo));
+            } else {
+                card.style.opacity = '0.6';
                 card.addEventListener('click', () => {
-                    this.abrirModulo(modulo);
+                    alert('🔒 Completa las lecciones anteriores para desbloquear esta.');
                 });
             }
 
@@ -211,36 +247,18 @@ window.LearningPathController = {
     abrirModulo(modulo) {
         console.log("📖 [LearningPath] Abriendo módulo:", modulo);
         
-        // Guardar el módulo seleccionado
         window.Storage.set("modulo_actual", modulo);
+        window.Storage.set("current_modulo_id", modulo.id || modulo.id_modulo);
         
-        // Redirigir a la página de detalle
         window.location.href = `lesson-detail.html?id=${modulo.id || modulo.id_modulo}`;
     },
 
     getMockData() {
         return [
-            { 
-                id: 1,
-                titulo: "Leyes de Newton", 
-                descripcion: "Fundamentos de la dinámica", 
-                estado: "desbloqueado",
-                xp: 100
-            },
-            { 
-                id: 2,
-                titulo: "Fricción", 
-                descripcion: "Fuerzas de rozamiento", 
-                estado: "bloqueado",
-                xp: 150
-            },
-            { 
-                id: 3,
-                titulo: "Trabajo y Energía", 
-                descripcion: "Conservación de la energía", 
-                estado: "bloqueado",
-                xp: 200
-            }
+            { id: 1, titulo: "Leyes de Newton", descripcion: "Fundamentos de la dinámica", xp: 50 },
+            { id: 2, titulo: "MRU - Problemas Avanzados", descripcion: "Aplicaciones prácticas", xp: 60 },
+            { id: 3, titulo: "MRUV - Caída Libre", descripcion: "Aceleración constante", xp: 75 },
+            { id: 4, titulo: "Primera Ley de Newton", descripcion: "Inercia y equilibrio", xp: 80 }
         ];
     },
 
@@ -249,16 +267,10 @@ window.LearningPathController = {
     }
 };
 
-// Inicialización cuando la página carga
 document.addEventListener("DOMContentLoaded", () => {
-    if (window.LearningPathController && window.LearningPathController.init) {
-        window.LearningPathController.init();
-    }
+    if (window.LearningPathController) window.LearningPathController.init();
 });
 
-// También en deviceready para Cordova
 document.addEventListener("deviceready", () => {
-    if (window.LearningPathController && window.LearningPathController.init) {
-        window.LearningPathController.init();
-    }
+    if (window.LearningPathController) window.LearningPathController.init();
 }, false);

@@ -3,21 +3,21 @@ const MenuController = {
         console.log("🏠 [MenuController] Inicializando...");
         
         if (!window.Storage || typeof window.Storage.get !== 'function') {
-            console.error("❌ [MenuController] Storage.js no se cargó correctamente");
+            console.error("❌ [MenuController] Storage no disponible");
             return;
         }
 
-        // Sincronizar datos del usuario desde el backend
+        // Sincronizar datos del usuario
         await this.sincronizarDatos();
 
-        // Obtener datos actualizados
+        // Renderizar interfaz
         const userData = window.Storage.get("user_data");
         console.log("👤 [MenuController] user_data:", userData);
         
         let userName = "Estudiante";
         
         if (userData && typeof userData === 'object') {
-            userName = userData.nombre || userName;
+            userName = userData.nombre || userData.name || userName;
         } else {
             const userNameDirect = window.Storage.get("userName");
             if (userNameDirect) {
@@ -32,14 +32,11 @@ const MenuController = {
         
         console.log("✅ [MenuController] Nombre final:", userName);
         
-        // Renderizar nombre
         const welcomeText = document.getElementById("welcomeText");
         if (welcomeText) {
-            // CORREGIDO: Uso correcto de backticks (ya lo tenías bien aquí)
             welcomeText.textContent = `¡Hola, ${userName}!`;
         }
         
-        // Renderizar nivel y XP
         if (userData && typeof userData === 'object') {
             const nivelText = document.getElementById("nivelText");
             const xpText = document.getElementById("xpText");
@@ -47,22 +44,18 @@ const MenuController = {
             const energiaText = document.getElementById("energiaText");
             
             if (nivelText) {
-                // CORREGIDO: Asegurando Template Literal
                 nivelText.textContent = `Nivel ${userData.nivel || 1}`;
             }
             
             if (xpText) {
-                // CORREGIDO: Asegurando Template Literal
                 xpText.textContent = `${userData.xp || 0} XP`;
             }
 
             if (vidasText) {
-                // CORREGIDO: Asegurando Template Literal
                 vidasText.textContent = `❤️ ${userData.vidas !== undefined ? userData.vidas : 5}`;
             }
 
             if (energiaText) {
-                // CORREGIDO: Asegurando Template Literal
                 energiaText.textContent = `⚡ ${userData.energia !== undefined ? userData.energia : 5}`;
             }
         }
@@ -70,7 +63,7 @@ const MenuController = {
 
     async sincronizarDatos() {
         try {
-            console.log("📡 [MenuController] Sincronizando datos del usuario...");
+            console.log("📡 [MenuController] Sincronizando datos...");
             
             const token = window.Storage.get("token");
             if (!token) {
@@ -78,7 +71,6 @@ const MenuController = {
                 return;
             }
 
-            // CORREGIDO: Backticks para la URL de la API
             const response = await fetch(`${window.CONFIG.API_URL}/usuario/perfil`, {
                 method: "GET",
                 headers: {
@@ -88,65 +80,71 @@ const MenuController = {
             });
 
             if (!response.ok) {
-                // CORREGIDO: Backticks para el log de error
-                console.warn(`⚠️ Error al obtener perfil: ${response.status}`);
+                console.warn(`⚠️ Error HTTP ${response.status}`);
                 return;
             }
 
-            const data = await response.json();
-            console.log("📥 [MenuController] Datos recibidos:", data);
+            let result = await response.json();
+            console.log("📥 [MenuController] Respuesta backend:", result);
 
-            // Actualizar user_data en localStorage
+            // MANEJO ROBUSTO de la respuesta
+            let data = result.data || result.usuario || result;
+
             const datosActualizados = {
                 id: data.id,
-                nombre: data.nombre,
+                nombre: data.nombre || data.name || "Estudiante",
                 email: data.email,
-                nivel: data.nivel || 1,
-                xp: data.xp || 0,
-                racha: data.racha || 0,
-                vidas: data.vidas !== undefined ? data.vidas : 5,
-                energia: data.energia !== undefined ? data.energia : 5,
-                lecciones_completadas: data.lecciones_completadas || 0,
-                total_aciertos: data.total_aciertos || 0,
-                total_intentos: data.total_intentos || 0,
-                logros: data.logros || []
+                nivel: parseInt(data.nivel || data.level || 1),
+                xp: parseInt(data.xp || data.xp_actual || data.experiencia || 0),
+                racha: parseInt(data.racha || data.streak || 0),
+                vidas: data.vidas !== undefined ? parseInt(data.vidas) : 5,
+                energia: data.energia !== undefined ? parseInt(data.energia) : 5,
+                lecciones_completadas: parseInt(data.lecciones_completadas || data.completed_lessons || 0),
+                total_aciertos: parseInt(data.total_aciertos || data.correct_answers || 0),
+                total_intentos: parseInt(data.total_intentos || data.total_attempts || 0),
+                logros: Array.isArray(data.logros) ? data.logros : 
+                       Array.isArray(data.achievements) ? data.achievements : []
             };
 
             window.Storage.set("user_data", datosActualizados);
-            window.Storage.set("userName", data.nombre || "Estudiante");
+            window.Storage.set("userName", datosActualizados.nombre);
             
             console.log("✅ [MenuController] Datos sincronizados");
 
         } catch (error) {
-            console.error("❌ [MenuController] Error sincronizando:", error);
+            console.error("❌ [MenuController] Error:", error);
         }
     },
 
-    // Métodos de navegación
-    goLearning() { window.location.href = "learning-path.html"; },
-    goCalculators() { window.location.href = "calculators.html"; },
-    goProfile() { window.location.href = "profile.html"; },
+    goLearning() { 
+        console.log("🎓 [MenuController] Ir a learning-path");
+        window.location.href = "learning-path.html"; 
+    },
+    
+    goCalculators() { 
+        console.log("🔢 [MenuController] Ir a calculators");
+        window.location.href = "calculators.html"; 
+    },
+    
+    goProfile() { 
+        console.log("👤 [MenuController] Ir a profile");
+        window.location.href = "profile.html"; 
+    },
     
     logout() {
+        console.log("🚪 [MenuController] Cerrando sesión");
+        
         if (confirm("¿Estás seguro de que quieres cerrar sesión?")) {
-            // Es mejor limpiar Storage completo si usas un helper
-            if (window.Storage && window.Storage.clear) {
-                window.Storage.clear();
-            } else {
-                localStorage.clear();
-            }
+            localStorage.clear();
             window.location.replace("login.html");
         }
     }
 };
 
-// Inicialización corregida para evitar doble ejecución
-const initOnce = () => {
-    if (!window.menuInitialized) {
-        window.menuInitialized = true;
-        MenuController.init();
-    }
-};
+document.addEventListener("DOMContentLoaded", function() {
+    MenuController.init();
+});
 
-document.addEventListener("DOMContentLoaded", initOnce);
-document.addEventListener("deviceready", initOnce, false);
+document.addEventListener("deviceready", function() {
+    MenuController.init();
+}, false);
