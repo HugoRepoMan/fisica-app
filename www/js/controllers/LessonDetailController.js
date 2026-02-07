@@ -148,10 +148,11 @@ window.LessonDetailController = {
     async finalizarLeccion() {
         console.log("🎉 [LessonDetail] Finalizando lección...");
         console.log(`📊 Aciertos: ${this.aciertos}/${this.totalPreguntas}`);
-        
+
         const puntaje = this.aciertos;
         const totalPreguntas = this.totalPreguntas;
-        
+        const moduloId = window.Storage.get("current_modulo_id");
+
         try {
             const token = window.Storage.get("token");
             if (!token) {
@@ -162,7 +163,7 @@ window.LessonDetailController = {
             }
 
             console.log("📡 Enviando progreso al backend...");
-            console.log({ puntaje, total_preguntas: totalPreguntas });
+            console.log({ puntaje, total_preguntas: totalPreguntas, leccion_id: moduloId });
 
             const response = await fetch(`${window.CONFIG.API_URL}/progreso/completar`, {
                 method: "POST",
@@ -172,7 +173,9 @@ window.LessonDetailController = {
                 },
                 body: JSON.stringify({
                     puntaje: puntaje,
-                    total_preguntas: totalPreguntas
+                    total_preguntas: totalPreguntas,
+                    leccion_id: moduloId,
+                    moduloId: moduloId
                 })
             });
 
@@ -185,46 +188,109 @@ window.LessonDetailController = {
             const data = await response.json();
             console.log("✅ Respuesta del backend:", data);
 
-            // CRÍTICO: Actualizar lecciones_completadas
+            // Actualizar datos del usuario localmente
+            const userData = window.Storage.get("user_data") || {};
+
             if (data.resumen) {
-                const userData = window.Storage.get("user_data") || {};
-                
-                // Actualizar TODOS los campos del resumen
+                // Actualizar campos del resumen
                 userData.xp = data.resumen.nuevo_total_xp || userData.xp || 0;
                 userData.nivel = data.resumen.nuevo_nivel || userData.nivel || 1;
                 userData.energia = data.resumen.nueva_energia || userData.energia || 5;
-                
-                // CRÍTICO: Incrementar lecciones completadas
-                if (userData.lecciones_completadas !== undefined) {
-                    userData.lecciones_completadas++;
+
+                // Usar lecciones_completadas del backend si viene, sino incrementar
+                if (data.resumen.lecciones_completadas !== undefined) {
+                    userData.lecciones_completadas = parseInt(data.resumen.lecciones_completadas);
                 } else {
-                    userData.lecciones_completadas = 1;
+                    userData.lecciones_completadas = (parseInt(userData.lecciones_completadas) || 0) + 1;
                 }
-                
-                window.Storage.set("user_data", userData);
-                console.log("✅ Datos actualizados:", userData);
-                console.log(`📚 Lecciones completadas: ${userData.lecciones_completadas}`);
+            } else {
+                // Aunque no haya resumen, incrementar lecciones completadas
+                userData.lecciones_completadas = (parseInt(userData.lecciones_completadas) || 0) + 1;
+            }
+
+            // Actualizar aciertos e intentos localmente
+            userData.total_aciertos = (parseInt(userData.total_aciertos) || 0) + puntaje;
+            userData.total_intentos = (parseInt(userData.total_intentos) || 0) + totalPreguntas;
+
+            // Evaluar y desbloquear logros
+            userData.logros = this.evaluarLogros(userData);
+
+            window.Storage.set("user_data", userData);
+            console.log("✅ Datos actualizados:", userData);
+            console.log(`📚 Lecciones completadas: ${userData.lecciones_completadas}`);
+
+            // Limpiar caché de ruta para forzar re-render con nuevo estado
+            if (window.CacheService) {
+                window.CacheService.delete('ruta_aprendizaje');
             }
 
             // Mostrar mensaje de éxito
             const xpGanada = data.resumen?.xp_ganada || 0;
             const subiNivel = data.resumen?.subio_nivel || false;
-            
+
             let mensaje = `¡Excelente trabajo! 🎉\n\nGanaste ${xpGanada} XP`;
             if (subiNivel) {
                 mensaje += `\n\n🎊 ¡SUBISTE DE NIVEL! Ahora eres nivel ${data.resumen.nuevo_nivel}`;
             }
-            
+
+            // Notificar logros nuevos
+            const logrosNuevos = data.nuevos_logros || [];
+            if (logrosNuevos.length > 0) {
+                mensaje += `\n\n🏅 ¡Nuevos logros desbloqueados!`;
+            }
+
             alert(mensaje);
-            
+
             // Volver a la ruta de aprendizaje
             window.location.href = "learning-path.html";
 
         } catch (error) {
             console.error("❌ Error al guardar progreso:", error);
-            alert("Completaste la lección, pero hubo un error al guardar el progreso. Por favor, verifica tu conexión.");
+
+            // Aun si falla el backend, actualizar progreso localmente
+            const userData = window.Storage.get("user_data") || {};
+            userData.lecciones_completadas = (parseInt(userData.lecciones_completadas) || 0) + 1;
+            userData.total_aciertos = (parseInt(userData.total_aciertos) || 0) + puntaje;
+            userData.total_intentos = (parseInt(userData.total_intentos) || 0) + totalPreguntas;
+            userData.logros = this.evaluarLogros(userData);
+            window.Storage.set("user_data", userData);
+
+            if (window.CacheService) {
+                window.CacheService.delete('ruta_aprendizaje');
+            }
+
+            alert("Completaste la lección. Tu progreso se guardó localmente.");
             window.location.href = "learning-path.html";
         }
+    },
+
+    evaluarLogros(userData) {
+        const logrosActuales = Array.isArray(userData.logros) ? [...userData.logros] : [];
+        const lecciones = parseInt(userData.lecciones_completadas) || 0;
+        const racha = parseInt(userData.racha) || 0;
+        const aciertos = parseInt(userData.total_aciertos) || 0;
+        const intentos = parseInt(userData.total_intentos) || 0;
+        const nivel = parseInt(userData.nivel) || 1;
+        const precision = intentos > 0 ? (aciertos / intentos) * 100 : 0;
+
+        const reglas = [
+            { id: 1, condicion: lecciones >= 1 },
+            { id: 2, condicion: lecciones >= 5 },
+            { id: 3, condicion: lecciones >= 3 },
+            { id: 4, condicion: racha >= 7 },
+            { id: 5, condicion: aciertos >= 50 },
+            { id: 6, condicion: precision >= 95 && intentos >= 10 },
+            { id: 7, condicion: nivel >= 10 }
+        ];
+
+        reglas.forEach(regla => {
+            if (regla.condicion && !logrosActuales.includes(regla.id)) {
+                logrosActuales.push(regla.id);
+                console.log(`🏅 Logro desbloqueado: ID ${regla.id}`);
+            }
+        });
+
+        return logrosActuales;
     },
 
     salir() { 

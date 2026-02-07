@@ -64,12 +64,15 @@ const MenuController = {
     async sincronizarDatos() {
         try {
             console.log("📡 [MenuController] Sincronizando datos...");
-            
+
             const token = window.Storage.get("token");
             if (!token) {
                 console.warn("⚠️ No hay token");
                 return;
             }
+
+            // Guardar datos locales ANTES de sincronizar
+            const datosLocales = window.Storage.get("user_data") || {};
 
             const response = await fetch(`${window.CONFIG.API_URL}/usuario/perfil`, {
                 method: "GET",
@@ -90,6 +93,16 @@ const MenuController = {
             // MANEJO ROBUSTO de la respuesta
             let data = result.data || result.usuario || result;
 
+            // Preservar el MAYOR entre local y backend para no perder progreso
+            const backendLecciones = parseInt(data.lecciones_completadas || data.completed_lessons || 0);
+            const localLecciones = parseInt(datosLocales.lecciones_completadas || 0);
+
+            // Merge logros
+            const backendLogros = Array.isArray(data.logros) ? data.logros :
+                                  Array.isArray(data.achievements) ? data.achievements : [];
+            const localLogros = Array.isArray(datosLocales.logros) ? datosLocales.logros : [];
+            const logrosMerged = [...new Set([...backendLogros, ...localLogros])];
+
             const datosActualizados = {
                 id: data.id,
                 nombre: data.nombre || data.name || "Estudiante",
@@ -99,16 +112,21 @@ const MenuController = {
                 racha: parseInt(data.racha || data.streak || 0),
                 vidas: data.vidas !== undefined ? parseInt(data.vidas) : 5,
                 energia: data.energia !== undefined ? parseInt(data.energia) : 5,
-                lecciones_completadas: parseInt(data.lecciones_completadas || data.completed_lessons || 0),
-                total_aciertos: parseInt(data.total_aciertos || data.correct_answers || 0),
-                total_intentos: parseInt(data.total_intentos || data.total_attempts || 0),
-                logros: Array.isArray(data.logros) ? data.logros : 
-                       Array.isArray(data.achievements) ? data.achievements : []
+                lecciones_completadas: Math.max(backendLecciones, localLecciones),
+                total_aciertos: Math.max(
+                    parseInt(data.total_aciertos || data.correct_answers || 0),
+                    parseInt(datosLocales.total_aciertos || 0)
+                ),
+                total_intentos: Math.max(
+                    parseInt(data.total_intentos || data.total_attempts || 0),
+                    parseInt(datosLocales.total_intentos || 0)
+                ),
+                logros: logrosMerged
             };
 
             window.Storage.set("user_data", datosActualizados);
             window.Storage.set("userName", datosActualizados.nombre);
-            
+
             console.log("✅ [MenuController] Datos sincronizados");
 
         } catch (error) {

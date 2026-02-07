@@ -20,24 +20,30 @@ window.ProfileController = {
             console.log("✅ [ProfileController] Perfil cargado correctamente");
         } catch (error) {
             console.error("❌ [ProfileController] Error:", error);
-            
+
             // Intentar renderizar con datos locales aunque falle el backend
             const user = window.Storage.get("user_data") || {};
+            // Evaluar logros con datos locales
+            user.logros = this.evaluarLogros(user);
+            window.Storage.set("user_data", user);
             this.renderEstadisticas(user);
             this.renderProgressBar(user);
-            this.renderAchievements(user.logros || []);
+            await this.renderAchievements(user.logros || []);
         }
     },
 
     async sincronizarPerfil() {
         try {
             console.log("📡 [ProfileController] Sincronizando con backend...");
-            
+
             const token = window.Storage.get("token");
             if (!token) {
                 console.warn("⚠️ No hay token");
                 return;
             }
+
+            // Guardar datos locales ANTES de sincronizar
+            const datosLocales = window.Storage.get("user_data") || {};
 
             const response = await fetch(`${window.CONFIG.API_URL}/usuario/perfil`, {
                 method: "GET",
@@ -57,6 +63,17 @@ window.ProfileController = {
             // MANEJO ROBUSTO: Puede venir en diferentes formatos
             let data = result.data || result.usuario || result;
 
+            // Preservar el MAYOR entre local y backend para no perder progreso
+            const backendLecciones = parseInt(data.lecciones_completadas || data.completed_lessons || 0);
+            const localLecciones = parseInt(datosLocales.lecciones_completadas || 0);
+            const leccionesFinales = Math.max(backendLecciones, localLecciones);
+
+            // Merge logros: unión de backend y locales
+            const backendLogros = Array.isArray(data.logros) ? data.logros :
+                                  Array.isArray(data.achievements) ? data.achievements : [];
+            const localLogros = Array.isArray(datosLocales.logros) ? datosLocales.logros : [];
+            const logrosMerged = [...new Set([...backendLogros, ...localLogros])];
+
             // EXTRACCIÓN SEGURA de todos los campos posibles
             const datosSincronizados = {
                 id: data.id,
@@ -67,11 +84,16 @@ window.ProfileController = {
                 nivel: parseInt(data.nivel || data.level || 1),
                 vidas: data.vidas !== undefined ? parseInt(data.vidas) : 5,
                 energia: data.energia !== undefined ? parseInt(data.energia) : 5,
-                lecciones_completadas: parseInt(data.lecciones_completadas || data.completed_lessons || 0),
-                total_aciertos: parseInt(data.total_aciertos || data.correct_answers || 0),
-                total_intentos: parseInt(data.total_intentos || data.total_attempts || 0),
-                logros: Array.isArray(data.logros) ? data.logros : 
-                       Array.isArray(data.achievements) ? data.achievements : []
+                lecciones_completadas: leccionesFinales,
+                total_aciertos: Math.max(
+                    parseInt(data.total_aciertos || data.correct_answers || 0),
+                    parseInt(datosLocales.total_aciertos || 0)
+                ),
+                total_intentos: Math.max(
+                    parseInt(data.total_intentos || data.total_attempts || 0),
+                    parseInt(datosLocales.total_intentos || 0)
+                ),
+                logros: logrosMerged
             };
 
             // Calcular precisión
@@ -83,14 +105,46 @@ window.ProfileController = {
                 datosSincronizados.precision = 0;
             }
 
+            // Evaluar logros basados en estadísticas actuales
+            datosSincronizados.logros = this.evaluarLogros(datosSincronizados);
+
             window.Storage.set("user_data", datosSincronizados);
             window.Storage.set("userName", datosSincronizados.nombre);
-            
+
             console.log("✅ [ProfileController] Datos sincronizados:", datosSincronizados);
         } catch (error) {
             console.error("❌ [ProfileController] Error al sincronizar:", error);
             throw error;
         }
+    },
+
+    evaluarLogros(userData) {
+        const logrosActuales = Array.isArray(userData.logros) ? [...userData.logros] : [];
+        const lecciones = parseInt(userData.lecciones_completadas) || 0;
+        const racha = parseInt(userData.racha) || 0;
+        const aciertos = parseInt(userData.total_aciertos) || 0;
+        const intentos = parseInt(userData.total_intentos) || 0;
+        const nivel = parseInt(userData.nivel) || 1;
+        const precision = intentos > 0 ? (aciertos / intentos) * 100 : 0;
+
+        const reglas = [
+            { id: 1, condicion: lecciones >= 1 },
+            { id: 2, condicion: lecciones >= 5 },
+            { id: 3, condicion: lecciones >= 3 },
+            { id: 4, condicion: racha >= 7 },
+            { id: 5, condicion: aciertos >= 50 },
+            { id: 6, condicion: precision >= 95 && intentos >= 10 },
+            { id: 7, condicion: nivel >= 10 }
+        ];
+
+        reglas.forEach(regla => {
+            if (regla.condicion && !logrosActuales.includes(regla.id)) {
+                logrosActuales.push(regla.id);
+                console.log(`🏅 [ProfileController] Logro desbloqueado: ID ${regla.id}`);
+            }
+        });
+
+        return logrosActuales;
     },
 
     renderEstadisticas(user) {

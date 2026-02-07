@@ -22,12 +22,15 @@ window.LearningPathController = {
     async sincronizarDatosDesdeBD() {
         try {
             console.log("🔄 [LearningPath] Sincronizando datos...");
-            
+
             const token = window.Storage.get("token");
             if (!token) {
                 console.warn("⚠️ No hay token");
                 return;
             }
+
+            // Guardar datos locales ANTES de sincronizar
+            const datosLocales = window.Storage.get("user_data") || {};
 
             const response = await fetch(`${window.CONFIG.API_URL}/usuario/perfil`, {
                 method: "GET",
@@ -48,6 +51,18 @@ window.LearningPathController = {
             // MANEJO ROBUSTO: Puede venir en result.data, result.usuario, o directamente
             let userData = result.data || result.usuario || result;
 
+            const backendLecciones = parseInt(userData.lecciones_completadas || userData.completed_lessons || 0);
+            const localLecciones = parseInt(datosLocales.lecciones_completadas || 0);
+
+            // Usar el MAYOR entre local y backend para no perder progreso
+            const leccionesFinales = Math.max(backendLecciones, localLecciones);
+
+            // Merge logros: unión de backend y locales
+            const backendLogros = Array.isArray(userData.logros) ? userData.logros :
+                                  Array.isArray(userData.achievements) ? userData.achievements : [];
+            const localLogros = Array.isArray(datosLocales.logros) ? datosLocales.logros : [];
+            const logrosMerged = [...new Set([...backendLogros, ...localLogros])];
+
             // MANEJO ROBUSTO: Extraer campos de forma segura
             const datosActualizados = {
                 id: userData.id,
@@ -58,17 +73,23 @@ window.LearningPathController = {
                 racha: parseInt(userData.racha || userData.streak || 0),
                 vidas: userData.vidas !== undefined ? parseInt(userData.vidas) : 5,
                 energia: userData.energia !== undefined ? parseInt(userData.energia) : 5,
-                lecciones_completadas: parseInt(userData.lecciones_completadas || userData.completed_lessons || 0),
-                total_aciertos: parseInt(userData.total_aciertos || userData.correct_answers || 0),
-                total_intentos: parseInt(userData.total_intentos || userData.total_attempts || 0),
-                logros: Array.isArray(userData.logros) ? userData.logros : 
-                       Array.isArray(userData.achievements) ? userData.achievements : []
+                lecciones_completadas: leccionesFinales,
+                total_aciertos: Math.max(
+                    parseInt(userData.total_aciertos || userData.correct_answers || 0),
+                    parseInt(datosLocales.total_aciertos || 0)
+                ),
+                total_intentos: Math.max(
+                    parseInt(userData.total_intentos || userData.total_attempts || 0),
+                    parseInt(datosLocales.total_intentos || 0)
+                ),
+                logros: logrosMerged
             };
 
             window.Storage.set("user_data", datosActualizados);
             window.Storage.set("userName", datosActualizados.nombre);
-            
+
             console.log("✅ [LearningPath] Datos sincronizados:", datosActualizados);
+            console.log(`📊 Lecciones: backend=${backendLecciones}, local=${localLecciones}, final=${leccionesFinales}`);
         } catch (e) {
             console.error("❌ Error sincronizando:", e.message);
         }
