@@ -169,16 +169,17 @@ window.ProfileController = {
         const xpActual = parseInt(user.xp || 0);
         const nivel = parseInt(user.nivel || 1);
         const xpPorNivel = 200;
-        const xpEnEsteNivel = xpActual % xpPorNivel;
-        const porcentaje = Math.min((xpEnEsteNivel / xpPorNivel) * 100, 100);
-        
+        const xpBaseNivel = (nivel - 1) * xpPorNivel;
+        const xpEnEsteNivel = xpActual - xpBaseNivel;
+        const porcentaje = Math.min(Math.max((xpEnEsteNivel / xpPorNivel) * 100, 0), 100);
+
         if (levelDisplay) {
             levelDisplay.textContent = `Nivel ${nivel}`;
         }
-        
+
         if (xpStatusText) {
             const xpRestante = xpPorNivel - xpEnEsteNivel;
-            xpStatusText.textContent = `${xpEnEsteNivel} / ${xpPorNivel} XP (${xpRestante} XP para nivel ${nivel + 1})`;
+            xpStatusText.textContent = `${Math.max(xpEnEsteNivel, 0)} / ${xpPorNivel} XP (${Math.max(xpRestante, 0)} XP para nivel ${nivel + 1})`;
         }
 
         if (progressFill) {

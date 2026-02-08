@@ -4,59 +4,109 @@ window.LessonDetailController = {
     totalSteps: 0,
     aciertos: 0,
     totalPreguntas: 0,
+    moduloId: null,
 
     async init() {
         console.log("📚 [LessonDetail] Inicializando...");
-        
-        const moduloId = window.Storage.get("current_modulo_id");
-        console.log("📖 Módulo ID:", moduloId);
-        
-        if (!moduloId) {
+
+        this.moduloId = window.Storage.get("current_modulo_id");
+        console.log("📖 Módulo ID:", this.moduloId);
+
+        if (!this.moduloId) {
             console.error("❌ No hay módulo seleccionado");
             alert("Error: No se pudo cargar la lección");
             window.location.href = "learning-path.html";
             return;
         }
-        
-        this.lessonData = await this.obtenerDatosLeccion(moduloId);
-        
+
+        // Verificar vidas y energía antes de empezar
+        const userData = window.Storage.get("user_data") || {};
+        const vidas = userData.vidas !== undefined ? parseInt(userData.vidas) : 5;
+        const energia = userData.energia !== undefined ? parseInt(userData.energia) : 5;
+
+        if (vidas <= 0) {
+            alert("❤️ No tienes vidas disponibles.\nEspera a que se regeneren para continuar.");
+            window.location.href = "learning-path.html";
+            return;
+        }
+
+        // Obtener costo de energía del módulo
+        const contenidoLocal = window.LessonContentDB ? window.LessonContentDB.getContenido(this.moduloId) : null;
+        const energiaCosto = contenidoLocal ? contenidoLocal.energia_costo : 1;
+
+        if (energia < energiaCosto) {
+            alert(`⚡ No tienes suficiente energía.\nNecesitas ${energiaCosto} de energía para esta lección.\nCompleta logros o espera a que se regenere.`);
+            window.location.href = "learning-path.html";
+            return;
+        }
+
+        // Descontar energía al iniciar lección
+        userData.energia = energia - energiaCosto;
+        window.Storage.set("user_data", userData);
+        this.actualizarVidasUI(vidas, userData.energia);
+
+        this.lessonData = await this.obtenerDatosLeccion(this.moduloId);
+
         if (!this.lessonData) {
             console.error("❌ No se pudieron cargar los datos de la lección");
             alert("Error al cargar la lección. Usando contenido de respaldo.");
             this.lessonData = this.getMockLesson();
         }
-        
+
         this.totalSteps = this.lessonData.theory.length + this.lessonData.questions.length;
         this.totalPreguntas = this.lessonData.questions.length;
         this.aciertos = 0;
+        this.currentStep = 0;
         this.renderStep();
+    },
+
+    actualizarVidasUI(vidas, energia) {
+        const vidasEl = document.getElementById("livesCount");
+        if (vidasEl) vidasEl.innerText = vidas;
+        const energiaEl = document.getElementById("energyCount");
+        if (energiaEl) energiaEl.innerText = energia;
     },
 
     async procesarError() {
         try {
-            const vidasEl = document.getElementById("livesCount");
-            if (vidasEl) {
-                let vidas = parseInt(vidasEl.innerText) || 0;
-                if (vidas > 0) {
-                    vidasEl.innerText = vidas - 1;
-                    console.log("💔 Vida restada (visual)");
-                }
+            // Gestionar vidas LOCALMENTE (el endpoint /progreso/fallar da 403)
+            const userData = window.Storage.get("user_data") || {};
+            let vidas = userData.vidas !== undefined ? parseInt(userData.vidas) : 5;
+
+            if (vidas > 0) {
+                vidas--;
+                userData.vidas = vidas;
+                window.Storage.set("user_data", userData);
+                console.log(`💔 Vida restada localmente. Quedan: ${vidas}`);
             }
 
-            // Llamar al backend para restar vida
-            const token = window.Storage.get("token");
-            if (token) {
-                await fetch(`${window.CONFIG.API_URL}/progreso/fallar`, {
-                    method: "POST",
-                    headers: {
-                        "x-auth-token": token,
-                        "Content-Type": "application/json"
-                    }
-                });
-                console.log("💔 Vida restada en el servidor");
+            this.actualizarVidasUI(vidas, userData.energia);
+
+            // Si se queda sin vidas, expulsar de la lección
+            if (vidas <= 0) {
+                alert("💔 Te has quedado sin vidas.\nNo puedes continuar esta lección.");
+                window.location.href = "learning-path.html";
+                return;
+            }
+
+            // Intentar sincronizar con backend (sin bloquear si falla)
+            try {
+                const token = window.Storage.get("token");
+                if (token) {
+                    await fetch(`${window.CONFIG.API_URL}/progreso/fallar`, {
+                        method: "POST",
+                        headers: {
+                            "x-auth-token": token,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ moduloId: this.moduloId })
+                    });
+                }
+            } catch (e) {
+                console.warn("⚠️ No se pudo sincronizar vida con backend:", e.message);
             }
         } catch (error) {
-            console.error("Error al restar vida:", error);
+            console.error("Error al procesar fallo:", error);
         }
     },
 
@@ -68,7 +118,7 @@ window.LessonDetailController = {
         const progress = ((this.currentStep + 1) / this.totalSteps) * 100;
         const progressBar = document.getElementById("lessonProgressBar");
         const stepCounter = document.getElementById("stepCounter");
-        
+
         if (progressBar) progressBar.style.width = `${progress}%`;
         if (stepCounter) stepCounter.textContent = `${this.currentStep + 1}/${this.totalSteps}`;
 
@@ -94,7 +144,7 @@ window.LessonDetailController = {
             const qIndex = this.currentStep - this.lessonData.theory.length;
             this.renderPregunta(this.lessonData.questions[qIndex]);
         }
-        
+
         if (window.lucide) lucide.createIcons();
     },
 
@@ -107,7 +157,7 @@ window.LessonDetailController = {
                 <div id="optionsContainer" class="columns is-multiline">
                     ${pregunta.options.map((opt, i) => `
                         <div class="column is-12">
-                            <button class="button is-fullwidth is-white is-rounded shadow-sm option-btn" 
+                            <button class="button is-fullwidth is-white is-rounded shadow-sm option-btn"
                                     onclick="LessonDetailController.validarRespuesta(${i}, ${pregunta.correctAnswer})">
                                 <span class="option-letter mr-3">${String.fromCharCode(65 + i)}</span> ${opt}
                             </button>
@@ -132,7 +182,11 @@ window.LessonDetailController = {
             buttons[correctIndex].classList.add('is-success');
             await this.procesarError();
             console.log(`❌ Respuesta incorrecta (${this.aciertos}/${this.totalPreguntas})`);
-            setTimeout(() => this.siguiente(), 2000);
+            // Solo continuar si aún tiene vidas (procesarError redirige si no)
+            const userData = window.Storage.get("user_data") || {};
+            if ((userData.vidas || 0) > 0) {
+                setTimeout(() => this.siguiente(), 2000);
+            }
         }
     },
 
@@ -151,7 +205,13 @@ window.LessonDetailController = {
 
         const puntaje = this.aciertos;
         const totalPreguntas = this.totalPreguntas;
-        const moduloId = window.Storage.get("current_modulo_id");
+        const moduloId = this.moduloId;
+
+        // Obtener XP de recompensa del módulo
+        const contenidoLocal = window.LessonContentDB ? window.LessonContentDB.getContenido(moduloId) : null;
+        const xpModulo = contenidoLocal ? contenidoLocal.xp_recompensa : 50;
+        // XP proporcional a aciertos
+        const xpGanada = totalPreguntas > 0 ? Math.round((puntaje / totalPreguntas) * xpModulo) : xpModulo;
 
         try {
             const token = window.Storage.get("token");
@@ -163,7 +223,6 @@ window.LessonDetailController = {
             }
 
             console.log("📡 Enviando progreso al backend...");
-            console.log({ puntaje, total_preguntas: totalPreguntas, leccion_id: moduloId });
 
             const response = await fetch(`${window.CONFIG.API_URL}/progreso/completar`, {
                 method: "POST",
@@ -175,93 +234,120 @@ window.LessonDetailController = {
                     puntaje: puntaje,
                     total_preguntas: totalPreguntas,
                     leccion_id: moduloId,
-                    moduloId: moduloId
+                    moduloId: moduloId,
+                    xp: xpGanada
                 })
             });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error("❌ Error del servidor:", response.status, errorText);
-                throw new Error(`Error ${response.status}: ${errorText}`);
-            }
-
-            const data = await response.json();
-            console.log("✅ Respuesta del backend:", data);
-
-            // Actualizar datos del usuario localmente
-            const userData = window.Storage.get("user_data") || {};
-
-            if (data.resumen) {
-                // Actualizar campos del resumen
-                userData.xp = data.resumen.nuevo_total_xp || userData.xp || 0;
-                userData.nivel = data.resumen.nuevo_nivel || userData.nivel || 1;
-                userData.energia = data.resumen.nueva_energia || userData.energia || 5;
-
-                // Usar lecciones_completadas del backend si viene, sino incrementar
-                if (data.resumen.lecciones_completadas !== undefined) {
-                    userData.lecciones_completadas = parseInt(data.resumen.lecciones_completadas);
-                } else {
-                    userData.lecciones_completadas = (parseInt(userData.lecciones_completadas) || 0) + 1;
-                }
+            let backendData = null;
+            if (response.ok) {
+                backendData = await response.json();
+                console.log("✅ Respuesta del backend:", backendData);
             } else {
-                // Aunque no haya resumen, incrementar lecciones completadas
-                userData.lecciones_completadas = (parseInt(userData.lecciones_completadas) || 0) + 1;
+                console.warn(`⚠️ Backend respondió ${response.status}, actualizando solo localmente`);
             }
 
-            // Actualizar aciertos e intentos localmente
-            userData.total_aciertos = (parseInt(userData.total_aciertos) || 0) + puntaje;
-            userData.total_intentos = (parseInt(userData.total_intentos) || 0) + totalPreguntas;
-
-            // Evaluar y desbloquear logros
-            userData.logros = this.evaluarLogros(userData);
-
-            window.Storage.set("user_data", userData);
-            console.log("✅ Datos actualizados:", userData);
-            console.log(`📚 Lecciones completadas: ${userData.lecciones_completadas}`);
-
-            // Limpiar caché de ruta para forzar re-render con nuevo estado
-            if (window.CacheService) {
-                window.CacheService.delete('ruta_aprendizaje');
-            }
-
-            // Mostrar mensaje de éxito
-            const xpGanada = data.resumen?.xp_ganada || 0;
-            const subiNivel = data.resumen?.subio_nivel || false;
-
-            let mensaje = `¡Excelente trabajo! 🎉\n\nGanaste ${xpGanada} XP`;
-            if (subiNivel) {
-                mensaje += `\n\n🎊 ¡SUBISTE DE NIVEL! Ahora eres nivel ${data.resumen.nuevo_nivel}`;
-            }
-
-            // Notificar logros nuevos
-            const logrosNuevos = data.nuevos_logros || [];
-            if (logrosNuevos.length > 0) {
-                mensaje += `\n\n🏅 ¡Nuevos logros desbloqueados!`;
-            }
-
-            alert(mensaje);
-
-            // Volver a la ruta de aprendizaje
-            window.location.href = "learning-path.html";
+            this.actualizarProgresoLocal(backendData, puntaje, totalPreguntas, xpGanada);
 
         } catch (error) {
             console.error("❌ Error al guardar progreso:", error);
-
-            // Aun si falla el backend, actualizar progreso localmente
-            const userData = window.Storage.get("user_data") || {};
-            userData.lecciones_completadas = (parseInt(userData.lecciones_completadas) || 0) + 1;
-            userData.total_aciertos = (parseInt(userData.total_aciertos) || 0) + puntaje;
-            userData.total_intentos = (parseInt(userData.total_intentos) || 0) + totalPreguntas;
-            userData.logros = this.evaluarLogros(userData);
-            window.Storage.set("user_data", userData);
-
-            if (window.CacheService) {
-                window.CacheService.delete('ruta_aprendizaje');
-            }
-
-            alert("Completaste la lección. Tu progreso se guardó localmente.");
-            window.location.href = "learning-path.html";
+            this.actualizarProgresoLocal(null, puntaje, totalPreguntas, xpGanada);
         }
+    },
+
+    actualizarProgresoLocal(backendData, puntaje, totalPreguntas, xpGanada) {
+        const userData = window.Storage.get("user_data") || {};
+        const resumen = backendData ? backendData.resumen : null;
+
+        // Lecciones completadas
+        if (resumen && resumen.lecciones_completadas !== undefined) {
+            userData.lecciones_completadas = Math.max(
+                parseInt(resumen.lecciones_completadas),
+                (parseInt(userData.lecciones_completadas) || 0) + 1
+            );
+        } else {
+            userData.lecciones_completadas = (parseInt(userData.lecciones_completadas) || 0) + 1;
+        }
+
+        // XP: usar backend si disponible, sino calcular localmente
+        if (resumen && resumen.nuevo_total_xp !== undefined) {
+            userData.xp = Math.max(parseInt(resumen.nuevo_total_xp), (parseInt(userData.xp) || 0) + xpGanada);
+        } else {
+            userData.xp = (parseInt(userData.xp) || 0) + xpGanada;
+        }
+
+        // Nivel: calcular basado en XP (200 XP por nivel)
+        const xpPorNivel = 200;
+        const nivelCalculado = Math.floor(userData.xp / xpPorNivel) + 1;
+        const nivelAnterior = parseInt(userData.nivel) || 1;
+        if (resumen && resumen.nuevo_nivel) {
+            userData.nivel = Math.max(parseInt(resumen.nuevo_nivel), nivelCalculado);
+        } else {
+            userData.nivel = nivelCalculado;
+        }
+        const subioNivel = userData.nivel > nivelAnterior;
+
+        // Energía del backend o mantener local
+        if (resumen && resumen.nueva_energia !== undefined) {
+            userData.energia = parseInt(resumen.nueva_energia);
+        }
+
+        // Aciertos e intentos
+        userData.total_aciertos = (parseInt(userData.total_aciertos) || 0) + puntaje;
+        userData.total_intentos = (parseInt(userData.total_intentos) || 0) + totalPreguntas;
+
+        // Racha: actualizar si completó lección hoy
+        userData.racha = this.actualizarRacha(userData);
+
+        // Evaluar logros
+        userData.logros = this.evaluarLogros(userData);
+
+        window.Storage.set("user_data", userData);
+
+        // Limpiar caché
+        if (window.CacheService) {
+            window.CacheService.delete('ruta_aprendizaje');
+        }
+
+        console.log("✅ Progreso actualizado:", userData);
+
+        // Mensaje de éxito
+        let mensaje = `¡Excelente trabajo! 🎉\n\n⭐ Aciertos: ${puntaje}/${totalPreguntas}\n💫 +${xpGanada} XP`;
+        if (subioNivel) {
+            mensaje += `\n\n🎊 ¡SUBISTE DE NIVEL! Ahora eres nivel ${userData.nivel}`;
+        }
+
+        alert(mensaje);
+        window.location.href = "learning-path.html";
+    },
+
+    actualizarRacha(userData) {
+        const ahora = new Date();
+        const hoyStr = ahora.toISOString().split('T')[0]; // "YYYY-MM-DD"
+        const ultimaLeccion = userData.ultima_leccion_fecha || null;
+        let racha = parseInt(userData.racha) || 0;
+
+        if (!ultimaLeccion) {
+            // Primera lección completada
+            racha = 1;
+        } else {
+            const ultimaFecha = new Date(ultimaLeccion);
+            const diffMs = ahora.getTime() - ultimaFecha.getTime();
+            const diffHoras = diffMs / (1000 * 60 * 60);
+
+            if (ultimaLeccion === hoyStr) {
+                // Ya completó una lección hoy, mantener racha
+            } else if (diffHoras <= 48) {
+                // Completó ayer o dentro de 48h → sumar racha
+                racha++;
+            } else {
+                // Más de 48h sin completar → reiniciar racha
+                racha = 1;
+            }
+        }
+
+        userData.ultima_leccion_fecha = hoyStr;
+        return racha;
     },
 
     evaluarLogros(userData) {
@@ -293,77 +379,129 @@ window.LessonDetailController = {
         return logrosActuales;
     },
 
-    salir() { 
-        if (confirm("¿Seguro que quieres salir? Perderás tu progreso.")) {
-            window.location.href = "learning-path.html"; 
+    salir() {
+        if (confirm("¿Seguro que quieres salir? Perderás tu progreso en esta lección.")) {
+            window.location.href = "learning-path.html";
         }
     },
 
     async obtenerDatosLeccion(id) {
         try {
-            console.log(`📡 [LessonDetail] Cargando lección ${id} desde backend...`);
-            
-            const token = window.Storage.get("token");
-            if (!token) {
-                console.warn("⚠️ No hay token, usando datos de respaldo");
-                return this.getMockLesson();
-            }
+            console.log(`📡 [LessonDetail] Cargando lección ${id}...`);
 
-            // Intentar cargar desde el backend
-            const response = await fetch(`${window.CONFIG.API_URL}/content/leccion/${id}`, {
-                method: "GET",
-                headers: {
-                    "x-auth-token": token,
-                    "Content-Type": "application/json"
+            // 1. Intentar contenido local completo (tiene theory + questions)
+            if (window.LessonContentDB) {
+                const contenidoLocal = window.LessonContentDB.getContenido(id);
+                if (contenidoLocal && contenidoLocal.theory && contenidoLocal.questions) {
+                    console.log("✅ Contenido cargado desde base local");
+
+                    // Intentar enriquecer con datos del backend
+                    try {
+                        const token = window.Storage.get("token");
+                        if (token) {
+                            const response = await fetch(`${window.CONFIG.API_URL}/content/leccion/${id}`, {
+                                method: "GET",
+                                headers: {
+                                    "x-auth-token": token,
+                                    "Content-Type": "application/json"
+                                }
+                            });
+                            if (response.ok) {
+                                const backendData = await response.json();
+                                console.log("📥 Datos adicionales del backend:", backendData);
+                                // El backend retorna un array de lecciones sparse
+                                // Se podría integrar el contenido_texto y formula_latex si se desea
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("⚠️ No se pudieron obtener datos adicionales del backend");
+                    }
+
+                    return contenidoLocal;
                 }
-            });
-
-            if (!response.ok) {
-                console.warn(`⚠️ Endpoint /content/leccion/${id} no disponible (${response.status})`);
-                console.log("📚 Usando datos de respaldo");
-                return this.getMockLesson();
             }
 
-            const leccionData = await response.json();
-            console.log("✅ [LessonDetail] Lección cargada desde backend:", leccionData);
-            
-            // Validar que tenga la estructura correcta
-            if (leccionData.theory && leccionData.questions) {
-                return leccionData;
-            } else {
-                console.warn("⚠️ Estructura de lección inválida");
-                return this.getMockLesson();
+            // 2. Si no hay contenido local, intentar backend y transformar
+            const token = window.Storage.get("token");
+            if (token) {
+                const response = await fetch(`${window.CONFIG.API_URL}/content/leccion/${id}`, {
+                    method: "GET",
+                    headers: {
+                        "x-auth-token": token,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log("📥 Datos del backend:", data);
+
+                    // El backend retorna: [{id, modulo_id, titulo, contenido_texto, formula_latex}]
+                    const lecciones = Array.isArray(data) ? data : [data];
+                    if (lecciones.length > 0) {
+                        return this.transformarDatosBackend(lecciones);
+                    }
+                }
             }
+
+            // 3. Fallback a mock
+            console.warn("⚠️ Usando datos de respaldo");
+            return this.getMockLesson();
 
         } catch (error) {
             console.error("❌ Error al cargar lección:", error);
-            console.log("📚 Usando datos de respaldo");
             return this.getMockLesson();
         }
+    },
+
+    /**
+     * Transforma datos del backend al formato esperado por el frontend
+     * Backend: [{id, modulo_id, titulo, contenido_texto, formula_latex}]
+     * Frontend: {theory: [{title, content, formula, formulaExplanation}], questions: [...]}
+     */
+    transformarDatosBackend(lecciones) {
+        const theory = lecciones.map(l => ({
+            title: l.titulo || 'Lección',
+            content: l.contenido_texto || 'Contenido no disponible.',
+            formula: l.formula_latex || '',
+            formulaExplanation: l.explicacion_formula || ''
+        }));
+
+        // El backend no tiene preguntas, agregar preguntas genéricas
+        const questions = [
+            {
+                question: '¿Entendiste el contenido de esta lección?',
+                options: ['Sí, lo entendí completamente', 'Necesito repasar', 'No lo entendí', 'Parcialmente'],
+                correctAnswer: 0,
+                explanation: '¡Excelente! Sigue adelante con la siguiente lección.'
+            }
+        ];
+
+        return { theory, questions };
     },
 
     getMockLesson() {
         return {
             theory: [
-                { 
-                    title: '¿Qué es el MRU?', 
-                    content: 'El Movimiento Rectilíneo Uniforme (MRU) es aquel en el que un objeto se mueve en línea recta con velocidad constante.', 
-                    formula: 'v = d / t', 
-                    formulaExplanation: 'Donde v es velocidad, d es distancia y t es tiempo.' 
+                {
+                    title: '¿Qué es el MRU?',
+                    content: 'El Movimiento Rectilíneo Uniforme (MRU) es aquel en el que un objeto se mueve en línea recta con velocidad constante.',
+                    formula: 'v = d / t',
+                    formulaExplanation: 'Donde v es velocidad, d es distancia y t es tiempo.'
                 }
             ],
             questions: [
-                { 
-                    question: 'Si un auto va a 20 m/s por 5 segundos, ¿qué distancia recorre?', 
-                    options: ['100 metros', '25 metros', '4 metros', '15 metros'], 
-                    correctAnswer: 0, 
-                    explanation: 'd = v × t = 20 × 5 = 100 metros' 
+                {
+                    question: 'Si un auto va a 20 m/s por 5 segundos, ¿qué distancia recorre?',
+                    options: ['100 metros', '25 metros', '4 metros', '15 metros'],
+                    correctAnswer: 0,
+                    explanation: 'd = v × t = 20 × 5 = 100 metros'
                 },
-                { 
-                    question: '¿Qué caracteriza al MRU?', 
-                    options: ['Velocidad constante', 'Aceleración variable', 'Velocidad cero', 'Movimiento circular'], 
-                    correctAnswer: 0, 
-                    explanation: 'En el MRU la velocidad es constante' 
+                {
+                    question: '¿Qué caracteriza al MRU?',
+                    options: ['Velocidad constante', 'Aceleración variable', 'Velocidad cero', 'Movimiento circular'],
+                    correctAnswer: 0,
+                    explanation: 'En el MRU la velocidad es constante'
                 }
             ]
         };
