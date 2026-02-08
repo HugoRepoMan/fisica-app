@@ -9,7 +9,7 @@ const db = require('../config/db');
 router.get('/logros', auth, userController.obtenerLogros);
 router.get('/perfil', auth, userController.obtenerPerfil);
 
-// ⭐ NUEVO ENDPOINT: Guardar logros desbloqueados
+// ⭐ NUEVO ENDPOINT: Guardar logros desbloqueado
 router.post('/logros', auth, async (req, res) => {
     try {
         const userId = req.usuario.id;

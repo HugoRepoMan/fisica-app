@@ -1,7 +1,6 @@
 // src/controllers/progressController.js
-const db = require('../config/db');
+const db = require('../config/db');  // ← CORREGIDO (era '../config/database')
 
-// --- 1. RESTAR VIDA (Ya lo tenías, lo dejamos igual) ---
 exports.restarVida = async (req, res) => {
     const userId = req.usuario.id;
     try {
@@ -10,28 +9,38 @@ exports.restarVida = async (req, res) => {
 
         if (vidas <= 0) return res.status(403).json({ msg: "Sin vidas", vidas: 0 });
 
-        if (vidas === 5) { // Si estaba lleno, activamos el reloj de regeneración
+        if (vidas === 5) {
             await db.query('UPDATE usuarios SET ultima_regeneracion = NOW() WHERE id = ?', [userId]);
         }
 
         await db.query('UPDATE usuarios SET vidas = vidas - 1 WHERE id = ?', [userId]);
         res.json({ msg: "Perdiste un corazón 💔", vidas: vidas - 1 });
-    } catch (error) { res.status(500).json({ error: "Error al restar vida" }); }
+    } catch (error) { 
+        res.status(500).json({ error: "Error al restar vida" }); 
+    }
 };
 
 exports.completarLeccion = async (req, res) => {
     const userId = req.usuario.id;
-    const { puntaje, total_preguntas } = req.body; 
+    const { puntaje, total_preguntas, xp } = req.body; 
 
     try {
-        // A. CÁLCULOS
-        const XP_BASE = 20;
-        const bono = Math.round((puntaje / total_preguntas) * 10);
-        const xpGanada = XP_BASE + bono;
-        
-        // B. ACTUALIZAR ESTADÍSTICAS + COBRAR ENERGÍA ⚡
-        // Agregamos: energia = GREATEST(0, energia - 2)
-        // GREATEST(0, ...) evita que la energía sea negativa
+        // A. CÁLCULOS (si el frontend envía `xp` lo usamos; si no, lo calculamos aquí)
+        let xpGanada;
+        if (xp !== undefined && xp !== null) {
+            const xpNum = Number(xp);
+            if (!isNaN(xpNum) && xpNum >= 0) {
+                xpGanada = Math.round(xpNum);
+            }
+        }
+
+        if (xpGanada === undefined) {
+            const XP_BASE = 20;
+            const bono = Math.round((puntaje / total_preguntas) * 10);
+            xpGanada = XP_BASE + bono;
+        }
+
+        // B. ACTUALIZAR ESTADÍSTICAS + COBRAR ENERGÍA
         await db.query(`
             UPDATE usuarios 
             SET xp_actual = xp_actual + ?,
@@ -42,8 +51,6 @@ exports.completarLeccion = async (req, res) => {
             WHERE id = ?
         `, [xpGanada, puntaje, total_preguntas, userId]);
 
-        // ... (El resto del código C, D y E sigue igual, no lo toques) ...
-        
         // C. REVISAR NIVEL (LEVEL UP)
         const [users] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia FROM usuarios WHERE id = ?', [userId]);
         const user = users[0];
@@ -58,7 +65,7 @@ exports.completarLeccion = async (req, res) => {
             await db.query('UPDATE usuarios SET nivel = ? WHERE id = ?', [nuevoNivel, userId]);
         }
 
-        // D. LOGROS (Igual que antes) ...
+        // D. LOGROS (tu código aquí si lo tienes)
 
         // E. RESPUESTA
         res.json({
@@ -66,10 +73,10 @@ exports.completarLeccion = async (req, res) => {
             resumen: {
                 xp_ganada: xpGanada,
                 nuevo_total_xp: user.xp_actual,
-                nueva_energia: user.energia, // Devolvemos la energía actual para que el front sepa
+                nueva_energia: user.energia,
                 subio_nivel: subioNivel,
                 nuevo_nivel: nuevoNivel,
-                lecciones_completadas: user.lecciones_completadas
+                lecciones_completadas: user.lecciones_completadas  // ← AGREGADO
             }
         });
 
@@ -79,16 +86,12 @@ exports.completarLeccion = async (req, res) => {
     }
 };
 
-// --- AUXILIAR: Función para dar logro sin repetir ---
+// Función auxiliar para logros
 async function otorgarLogro(userId, logroId, listaLogros) {
-    // 1. Verificar si ya lo tiene
     const [existe] = await db.query('SELECT * FROM usuario_logros WHERE user_id = ? AND logro_id = ?', [userId, logroId]);
     
     if (existe.length === 0) {
-        // 2. Si no lo tiene, se lo damos
         await db.query('INSERT INTO usuario_logros (user_id, logro_id) VALUES (?, ?)', [userId, logroId]);
-        
-        // 3. Obtenemos el nombre para avisarle al usuario
         const [info] = await db.query('SELECT titulo FROM logros WHERE id = ?', [logroId]);
         listaLogros.push(info[0].titulo);
     }
