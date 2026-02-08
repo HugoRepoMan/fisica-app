@@ -1,5 +1,9 @@
 const MenuController = {
+    _inicializado: false,
+
     async init() {
+        if (this._inicializado) return;
+        this._inicializado = true;
         console.log("🏠 [MenuController] Inicializando...");
         
         if (!window.Storage || typeof window.Storage.get !== 'function') {
@@ -108,10 +112,12 @@ const MenuController = {
                 nombre: data.nombre || data.name || "Estudiante",
                 email: data.email,
                 nivel: parseInt(data.nivel || data.level || 1),
-                xp: parseInt(data.xp || data.xp_actual || data.experiencia || 0),
-                racha: parseInt(data.racha || data.streak || 0),
-                vidas: data.vidas !== undefined ? parseInt(data.vidas) : 5,
-                energia: data.energia !== undefined ? parseInt(data.energia) : 5,
+                xp: Math.max(parseInt(data.xp || data.xp_actual || data.experiencia || 0), parseInt(datosLocales.xp || 0)),
+                racha: Math.max(parseInt(data.racha || data.streak || 0), parseInt(datosLocales.racha || 0)),
+                vidas: datosLocales.vidas !== undefined ? parseInt(datosLocales.vidas) :
+                       (data.vidas !== undefined ? parseInt(data.vidas) : 5),
+                energia: datosLocales.energia !== undefined ? parseInt(datosLocales.energia) :
+                         (data.energia !== undefined ? parseInt(data.energia) : 5),
                 lecciones_completadas: Math.max(backendLecciones, localLecciones),
                 total_aciertos: Math.max(
                     parseInt(data.total_aciertos || data.correct_answers || 0),
@@ -121,8 +127,15 @@ const MenuController = {
                     parseInt(data.total_intentos || data.total_attempts || 0),
                     parseInt(datosLocales.total_intentos || 0)
                 ),
-                logros: logrosMerged
+                logros: logrosMerged,
+                ultima_leccion_fecha: datosLocales.ultima_leccion_fecha || null,
+                ultima_regeneracion: datosLocales.ultima_regeneracion || Date.now()
             };
+
+            // Recalcular nivel basado en XP
+            const xpPorNivel = 100;
+            const nivelCalculado = Math.floor(datosActualizados.xp / xpPorNivel) + 1;
+            datosActualizados.nivel = Math.max(datosActualizados.nivel, nivelCalculado);
 
             window.Storage.set("user_data", datosActualizados);
             window.Storage.set("userName", datosActualizados.nombre);

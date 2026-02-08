@@ -1,5 +1,9 @@
 window.ProfileController = {
+    _inicializado: false,
+
     async init() {
+        if (this._inicializado) return;
+        this._inicializado = true;
         console.log("🔄 [ProfileController] Inicializando...");
         
         try {
@@ -79,11 +83,13 @@ window.ProfileController = {
                 id: data.id,
                 nombre: data.nombre || data.name || "Estudiante",
                 email: data.email,
-                xp: parseInt(data.xp || data.xp_actual || data.experiencia || 0),
-                racha: parseInt(data.racha || data.streak || 0),
+                xp: Math.max(parseInt(data.xp || data.xp_actual || data.experiencia || 0), parseInt(datosLocales.xp || 0)),
+                racha: Math.max(parseInt(data.racha || data.streak || 0), parseInt(datosLocales.racha || 0)),
                 nivel: parseInt(data.nivel || data.level || 1),
-                vidas: data.vidas !== undefined ? parseInt(data.vidas) : 5,
-                energia: data.energia !== undefined ? parseInt(data.energia) : 5,
+                vidas: datosLocales.vidas !== undefined ? parseInt(datosLocales.vidas) :
+                       (data.vidas !== undefined ? parseInt(data.vidas) : 5),
+                energia: datosLocales.energia !== undefined ? parseInt(datosLocales.energia) :
+                         (data.energia !== undefined ? parseInt(data.energia) : 5),
                 lecciones_completadas: leccionesFinales,
                 total_aciertos: Math.max(
                     parseInt(data.total_aciertos || data.correct_answers || 0),
@@ -93,8 +99,15 @@ window.ProfileController = {
                     parseInt(data.total_intentos || data.total_attempts || 0),
                     parseInt(datosLocales.total_intentos || 0)
                 ),
-                logros: logrosMerged
+                logros: logrosMerged,
+                ultima_leccion_fecha: datosLocales.ultima_leccion_fecha || null,
+                ultima_regeneracion: datosLocales.ultima_regeneracion || Date.now()
             };
+
+            // Recalcular nivel basado en XP
+            const xpPorNivel = 100;
+            const nivelCalculado = Math.floor(datosSincronizados.xp / xpPorNivel) + 1;
+            datosSincronizados.nivel = Math.max(datosSincronizados.nivel, nivelCalculado);
 
             // Calcular precisión
             if (datosSincronizados.total_intentos > 0) {
@@ -168,7 +181,7 @@ window.ProfileController = {
 
         const xpActual = parseInt(user.xp || 0);
         const nivel = parseInt(user.nivel || 1);
-        const xpPorNivel = 200;
+        const xpPorNivel = 100;
         const xpBaseNivel = (nivel - 1) * xpPorNivel;
         const xpEnEsteNivel = xpActual - xpBaseNivel;
         const porcentaje = Math.min(Math.max((xpEnEsteNivel / xpPorNivel) * 100, 0), 100);

@@ -1,6 +1,9 @@
 window.LearningPathController = {
+    _inicializado: false,
 
     async init() {
+        if (this._inicializado) return;
+        this._inicializado = true;
         console.log("🚀 [LearningPath] INIT");
 
         try {
@@ -130,7 +133,7 @@ window.LearningPathController = {
             };
 
             // Recalcular nivel basado en XP local si es mayor
-            const xpPorNivel = 200;
+            const xpPorNivel = 100;
             const nivelCalculado = Math.floor(datosActualizados.xp / xpPorNivel) + 1;
             datosActualizados.nivel = Math.max(datosActualizados.nivel, nivelCalculado);
 
@@ -279,7 +282,7 @@ window.LearningPathController = {
     renderProgressBar(userData) {
         const xpActual = parseInt(userData.xp || 0);
         const nivel = parseInt(userData.nivel || 1);
-        const xpPorNivel = 200;
+        const xpPorNivel = 100;
         const xpBaseNivel = (nivel - 1) * xpPorNivel;
         const xpEnEsteNivel = xpActual - xpBaseNivel;
         const porcentaje = (xpEnEsteNivel / xpPorNivel) * 100;

@@ -5,8 +5,12 @@ window.LessonDetailController = {
     aciertos: 0,
     totalPreguntas: 0,
     moduloId: null,
+    _inicializado: false,
 
     async init() {
+        // Evitar doble inicialización (DOMContentLoaded + deviceready)
+        if (this._inicializado) return;
+        this._inicializado = true;
         console.log("📚 [LessonDetail] Inicializando...");
 
         this.moduloId = window.Storage.get("current_modulo_id");
@@ -277,7 +281,7 @@ window.LessonDetailController = {
         }
 
         // Nivel: calcular basado en XP (200 XP por nivel)
-        const xpPorNivel = 200;
+        const xpPorNivel = 100;
         const nivelCalculado = Math.floor(userData.xp / xpPorNivel) + 1;
         const nivelAnterior = parseInt(userData.nivel) || 1;
         if (resumen && resumen.nuevo_nivel) {

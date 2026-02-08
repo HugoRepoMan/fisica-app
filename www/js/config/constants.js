@@ -33,7 +33,7 @@
         GAME_CONFIG: {
             MAX_VIDAS: 5,
             MAX_ENERGIA: 5,
-            XP_POR_NIVEL: 200
+            XP_POR_NIVEL: 100
         },
         FETCH_CONFIG: {
             TIMEOUT: 15000,
