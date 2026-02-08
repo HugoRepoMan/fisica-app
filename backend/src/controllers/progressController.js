@@ -52,7 +52,7 @@ exports.completarLeccion = async (req, res) => {
         `, [xpGanada, puntaje, total_preguntas, userId]);
 
         // C. REVISAR NIVEL (LEVEL UP)
-        const [users] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia FROM usuarios WHERE id = ?', [userId]);
+        const [users] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia, racha, fecha_ultima_leccion FROM usuarios WHERE id = ?', [userId]);
         const user = users[0];
         
         let nuevoNivel = user.nivel;
@@ -65,6 +65,41 @@ exports.completarLeccion = async (req, res) => {
             await db.query('UPDATE usuarios SET nivel = ? WHERE id = ?', [nuevoNivel, userId]);
         }
 
+        // D. ACTUALIZAR RACHA (STREAK)
+        const hoy = new Date();
+        const fechaHoyStr = hoy.toISOString().split('T')[0]; // YYYY-MM-DD
+        const fechaUltimaLeccionStr = user.fecha_ultima_leccion 
+            ? new Date(user.fecha_ultima_leccion).toISOString().split('T')[0]
+            : null;
+
+        let nuevaRacha = user.racha || 0;
+
+        if (fechaUltimaLeccionStr === null) {
+            // Primera lección de este usuario
+            nuevaRacha = 1;
+        } else if (fechaUltimaLeccionStr === fechaHoyStr) {
+            // Ya completó una lección hoy (no incrementa racha)
+            nuevaRacha = user.racha || 1;
+        } else {
+            // Comparar fechas
+            const fechaUltima = new Date(fechaUltimaLeccionStr);
+            const diferenciaDias = Math.floor((hoy - fechaUltima) / (1000 * 60 * 60 * 24));
+
+            if (diferenciaDias === 1) {
+                // Completó ayer, hoy sigue la racha
+                nuevaRacha = (user.racha || 1) + 1;
+            } else if (diferenciaDias > 1) {
+                // Pasaron más de 1 día sin completar lecciones - resetear racha
+                nuevaRacha = 1;
+            }
+        }
+
+        // Guardar la nueva racha y fecha de última lección
+        await db.query(
+            'UPDATE usuarios SET racha = ?, fecha_ultima_leccion = ? WHERE id = ?',
+            [nuevaRacha, fechaHoyStr, userId]
+        );
+
         // D. LOGROS (tu código aquí si lo tienes)
 
         // E. RESPUESTA
@@ -76,7 +111,8 @@ exports.completarLeccion = async (req, res) => {
                 nueva_energia: user.energia,
                 subio_nivel: subioNivel,
                 nuevo_nivel: nuevoNivel,
-                lecciones_completadas: user.lecciones_completadas  // ← AGREGADO
+                lecciones_completadas: user.lecciones_completadas,
+                racha: nuevaRacha
             }
         });
 

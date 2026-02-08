@@ -128,6 +128,11 @@ async function addMissingTables() {
             await db.query('ALTER TABLE usuarios ADD COLUMN titulo_usuario VARCHAR(50)');
             console.log("✅ Columna 'titulo_usuario' agregada");
         }
+        
+        if (!existingColumns.includes('fecha_ultima_leccion')) {
+            await db.query('ALTER TABLE usuarios ADD COLUMN fecha_ultima_leccion DATE');
+            console.log("✅ Columna 'fecha_ultima_leccion' agregada");
+        }
 
         // Actualizar valores NULL
         await db.query(`
