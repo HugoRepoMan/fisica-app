@@ -1,6 +1,20 @@
 // src/controllers/progressController.js
-const db = require('../config/db');  // ← CORREGIDO (era '../config/database')
+const db = require('../config/db');
 const { validateLessonCompletion } = require('../validators/inputValidators');
+
+// Intentar agregar la columna fecha_ultima_leccion si no existe
+(async () => {
+    try {
+        await db.query(`ALTER TABLE usuarios ADD COLUMN fecha_ultima_leccion DATE DEFAULT NULL`);
+        console.log('✅ Columna fecha_ultima_leccion creada exitosamente');
+    } catch (err) {
+        if (err.code === 'ER_DUP_FIELDNAME' || err.errno === 1060) {
+            console.log('ℹ️ Columna fecha_ultima_leccion ya existe');
+        } else {
+            console.warn('⚠️ No se pudo crear columna fecha_ultima_leccion:', err.message);
+        }
+    }
+})();
 
 exports.restarVida = async (req, res) => {
     const userId = req.usuario.id;
@@ -16,8 +30,8 @@ exports.restarVida = async (req, res) => {
 
         await db.query('UPDATE usuarios SET vidas = vidas - 1 WHERE id = ?', [userId]);
         res.json({ msg: "Perdiste un corazón 💔", vidas: vidas - 1 });
-    } catch (error) { 
-        res.status(500).json({ error: "Error al restar vida" }); 
+    } catch (error) {
+        res.status(500).json({ error: "Error al restar vida" });
     }
 };
 
@@ -37,14 +51,27 @@ exports.completarLeccion = async (req, res) => {
     const ultimaLeccionCliente = parsed.ultima_leccion_fecha;
     const energiaCliente = parsed.energia;
     const energia_costo = parsed.energia_costo;
-    // racha del cliente se puede leer pero no se confía ciegamente
-    const rachaCliente = req.body && req.body.racha;
 
     try {
         // ---------- A. OBTENER DATOS ACTUALES DEL USUARIO ----------
-        const [rows] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia, racha, fecha_ultima_leccion FROM usuarios WHERE id = ?', [userId]);
-        if (rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
-        const user = rows[0];
+        // Usar query segura que no falla si la columna fecha_ultima_leccion no existe
+        let user;
+        try {
+            const [rows] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia, racha, fecha_ultima_leccion FROM usuarios WHERE id = ?', [userId]);
+            if (rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+            user = rows[0];
+        } catch (colErr) {
+            if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+                // La columna no existe, consultar sin ella
+                console.warn('⚠️ Columna fecha_ultima_leccion no existe, consultando sin ella');
+                const [rows] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia, racha FROM usuarios WHERE id = ?', [userId]);
+                if (rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+                user = rows[0];
+                user.fecha_ultima_leccion = null;
+            } else {
+                throw colErr;
+            }
+        }
 
         // ---------- B. ENERGÍA: sincronizar o descontar ----------
         let nuevaEnergia;
@@ -76,7 +103,7 @@ exports.completarLeccion = async (req, res) => {
                 const [mods] = await db.query('SELECT xp FROM modulos WHERE id = ?', [moduloId]);
                 if (mods && mods.length > 0) {
                     const baseXp = Number(mods[0].xp) || 0;
-                    const maxAllowed = Math.max(baseXp * 3, baseXp + 50); // tolerancia razonable
+                    const maxAllowed = Math.max(baseXp * 3, baseXp + 50);
                     if (xpGanada > maxAllowed) {
                         console.warn(`XP enviado excesivo por user ${userId}: ${xpGanada} > ${maxAllowed} (modulo ${moduloId}). Se ajusta.`);
                         xpGanada = maxAllowed;
@@ -98,13 +125,25 @@ exports.completarLeccion = async (req, res) => {
             WHERE id = ?
         `, [xpGanada, puntaje || 0, total_preguntas || 0, nuevaEnergia, userId]);
 
-        // Reobtener usuario actualizado para valores consistentes
-        const [updatedRows] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia, racha, fecha_ultima_leccion FROM usuarios WHERE id = ?', [userId]);
-        const updatedUser = updatedRows[0];
+        // Reobtener usuario actualizado
+        let updatedUser;
+        try {
+            const [updatedRows] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia, racha, fecha_ultima_leccion FROM usuarios WHERE id = ?', [userId]);
+            updatedUser = updatedRows[0];
+        } catch (colErr) {
+            if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+                const [updatedRows] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia, racha FROM usuarios WHERE id = ?', [userId]);
+                updatedUser = updatedRows[0];
+                updatedUser.fecha_ultima_leccion = null;
+            } else {
+                throw colErr;
+            }
+        }
 
-        // ---------- F. NIVEL: recalcular con nuevo XP ----------
+        // ---------- F. NIVEL: recalcular con nuevo XP (100 XP por nivel) ----------
         const nuevoTotalXp = Number(updatedUser.xp_actual) || 0;
-        const nivelCalculado = Math.floor(nuevoTotalXp / 200) + 1;
+        const XP_POR_NIVEL = 100;
+        const nivelCalculado = Math.floor(nuevoTotalXp / XP_POR_NIVEL) + 1;
         let nuevoNivel = updatedUser.nivel;
         let subioNivel = false;
         if (nivelCalculado > updatedUser.nivel) {
@@ -113,11 +152,10 @@ exports.completarLeccion = async (req, res) => {
             await db.query('UPDATE usuarios SET nivel = ? WHERE id = ?', [nuevoNivel, userId]);
         }
 
-        // ---------- G. RACHA: recalcular de forma segura (no confiar ciegamente en cliente) ----------
+        // ---------- G. RACHA: recalcular ----------
         const hoy = new Date();
-        const fechaHoyStr = hoy.toISOString().split('T')[0]; // YYYY-MM-DD
+        const fechaHoyStr = hoy.toISOString().split('T')[0];
 
-        // Determinar la última fecha registrada (DB) y la fecha enviada por cliente (opcional)
         const fechaUltimaDbStr = updatedUser.fecha_ultima_leccion ? new Date(updatedUser.fecha_ultima_leccion).toISOString().split('T')[0] : null;
         let fechaReferenciaStr = fechaUltimaDbStr;
 
@@ -125,9 +163,7 @@ exports.completarLeccion = async (req, res) => {
             const cDate = new Date(ultimaLeccionCliente);
             if (!isNaN(cDate)) {
                 const cStr = cDate.toISOString().split('T')[0];
-                // No aceptar fechas futuras
                 if (cStr <= fechaHoyStr) {
-                    // Si cliente reporta una fecha más reciente que DB, la consideramos como referencia
                     if (!fechaReferenciaStr || cStr > fechaReferenciaStr) fechaReferenciaStr = cStr;
                 }
             }
@@ -136,10 +172,8 @@ exports.completarLeccion = async (req, res) => {
         let nuevaRacha = updatedUser.racha || 0;
 
         if (!fechaReferenciaStr) {
-            // No hay registro previo -> inicio de racha
             nuevaRacha = 1;
         } else if (fechaReferenciaStr === fechaHoyStr) {
-            // Ya completó hoy antes de esta petición
             nuevaRacha = updatedUser.racha || 1;
         } else {
             const fechaReferencia = new Date(fechaReferenciaStr);
@@ -151,12 +185,10 @@ exports.completarLeccion = async (req, res) => {
             } else if (diferenciaDias > 1) {
                 nuevaRacha = 1;
             } else {
-                // diferenciaDias <= 0 fuera de los casos anteriores
                 nuevaRacha = updatedUser.racha || 1;
             }
         }
 
-        // Fecha a guardar: preferir la fecha cliente si es válida y <= hoy, sino usar hoy
         let fechaParaGuardar = fechaHoyStr;
         if (ultimaLeccionCliente) {
             const cDate2 = new Date(ultimaLeccionCliente);
@@ -166,9 +198,19 @@ exports.completarLeccion = async (req, res) => {
             }
         }
 
-        await db.query('UPDATE usuarios SET racha = ?, fecha_ultima_leccion = ? WHERE id = ?', [nuevaRacha, fechaParaGuardar, userId]);
+        // Actualizar racha y fecha - con fallback si la columna no existe
+        try {
+            await db.query('UPDATE usuarios SET racha = ?, fecha_ultima_leccion = ? WHERE id = ?', [nuevaRacha, fechaParaGuardar, userId]);
+        } catch (colErr) {
+            if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+                console.warn('⚠️ Columna fecha_ultima_leccion no existe, actualizando solo racha');
+                await db.query('UPDATE usuarios SET racha = ? WHERE id = ?', [nuevaRacha, userId]);
+            } else {
+                throw colErr;
+            }
+        }
 
-        // ---------- H. RESPUESTA - devolver resumen con claves solicitadas ----------
+        // ---------- H. RESPUESTA ----------
         res.json({
             msg: "¡Lección completada!",
             resumen: {
@@ -182,8 +224,6 @@ exports.completarLeccion = async (req, res) => {
             }
         });
 
-        // (Lógica antigua removida — usamos la nueva respuesta arriba)
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Error al completar lección" });
@@ -193,7 +233,7 @@ exports.completarLeccion = async (req, res) => {
 // Función auxiliar para logros
 async function otorgarLogro(userId, logroId, listaLogros) {
     const [existe] = await db.query('SELECT * FROM usuario_logros WHERE user_id = ? AND logro_id = ?', [userId, logroId]);
-    
+
     if (existe.length === 0) {
         await db.query('INSERT INTO usuario_logros (user_id, logro_id) VALUES (?, ?)', [userId, logroId]);
         const [info] = await db.query('SELECT titulo FROM logros WHERE id = ?', [logroId]);
