@@ -106,8 +106,10 @@ exports.completarLeccion = async (req, res) => {
         const nuevoTotalXp = Number(updatedUser.xp_actual) || 0;
         const nivelCalculado = Math.floor(nuevoTotalXp / 200) + 1;
         let nuevoNivel = updatedUser.nivel;
+        let subioNivel = false;
         if (nivelCalculado > updatedUser.nivel) {
             nuevoNivel = nivelCalculado;
+            subioNivel = true;
             await db.query('UPDATE usuarios SET nivel = ? WHERE id = ?', [nuevoNivel, userId]);
         }
 
@@ -168,9 +170,12 @@ exports.completarLeccion = async (req, res) => {
 
         // ---------- H. RESPUESTA - devolver resumen con claves solicitadas ----------
         res.json({
+            msg: "¡Lección completada!",
             resumen: {
+                xp_ganada: xpGanada,
                 nuevo_total_xp: nuevoTotalXp,
                 nueva_energia: Number(nuevaEnergia),
+                subio_nivel: subioNivel,
                 nuevo_nivel: nuevoNivel,
                 lecciones_completadas: Number(updatedUser.lecciones_completadas || 0),
                 nueva_racha: nuevaRacha
