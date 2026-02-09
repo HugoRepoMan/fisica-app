@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruta de Aprendizaje | Física App</title>
+    
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/learning-path.css">
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <header class="top-bar">
+            <button class="back-circle-btn" onclick="LearningPathController.irAlMenu()">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="header-stats">
+                <div class="stat-bubble">
+                    <span class="emoji">🔥</span>
+                    <span id="streakCount">0</span>
+                </div>
+                <div class="stat-bubble">
+                    <span class="emoji">⚡</span>
+                    <span id="totalXPText">0</span>
+                </div>
+                <div class="stat-bubble">
+                    <span class="emoji">❤️</span>
+                    <span id="livesCount">0</span>
+                </div>
+                <div class="stat-bubble">
+                    <span class="emoji">🔋</span>
+                    <span id="energyCount">0</span>
+                </div>
+            </div>
+        </header>
+
+        <section class="welcome-container">
+            <h1 id="welcomeGreeting">Cargando...</h1> 
+            <p>Continúa tu camino de aprendizaje en física</p>
+        </section>
+
+        <section class="progress-card-main">
+            <div class="progress-header">
+                <div class="progress-titles">
+                    <p>Tu progreso</p>
+                    <h2 id="userLevelDisplay">Cargando nivel...</h2>
+                </div>
+                <div class="trophy-container">
+                    <i data-lucide="trophy"></i>
+                </div>
+            </div>
+            <div class="progress-track">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <small id="xpStatusText">Calculando progreso...</small>
+        </section>
+
+        <section class="learning-path-section">
+            <div class="path-title">
+                <i data-lucide="book-open"></i>
+                <h3>Ruta de Aprendizaje</h3>
+            </div>
+            
+            <div id="learningPathContainer">
+                <p style="text-align: center; color: #64748b; padding: 20px;">
+                    Cargando lecciones...
+                </p>
+            </div>
+        </section>
+
+    </div>
+
+<script src="../cordova.js"></script>
+<script src="../js/config/constants.js"></script>
+<script src="../js/utils/Storage.js"></script>
+<script src="../js/utils/Cache.js"></script>
+<script src="../js/services/api.js"></script>
+<script src="../js/services/ContentService.js"></script>
+<script src="../js/data/lessonContent.js"></script>
+<script src="../js/controllers/LearningPathController.js"></script>
+
+
+<script>
+    // Inicialización al cargar la página
+    document.addEventListener("DOMContentLoaded", () => {
+        // Dibujar los iconos de Lucide
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+        
+        // El controlador debe pintar los datos del Storage inmediatamente
+        if (window.LearningPathController && window.LearningPathController.renderHeaderFromLocalStorage) {
+            window.LearningPathController.renderHeaderFromLocalStorage();
+        }
+    });
+
+    // Control del botón físico de atrás en Android
+    document.addEventListener("deviceready", () => {
+        document.addEventListener("backbutton", (e) => {
+            e.preventDefault();
+            if (window.LearningPathController && window.LearningPathController.irAlMenu) {
+                window.LearningPathController.irAlMenu();
+            } else {
+                window.location.replace("menu.html");
+            }
+        }, false);
+    }, false);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impulso y Momentum</title>
+    <link rel="stylesheet" href="../css/calculator-shared.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <button class="icon-btn" onclick="goBack()"><i data-lucide="chevron-left"></i></button>
+            <h1 class="title">Impulso y Momentum</h1>
+        </header>
+        <div class="tabs">
+            <button class="tab active" onclick="setMode('momentum')">Momentum</button>
+            <button class="tab" onclick="setMode('impulse')">Impulso</button>
+        </div>
+        <div class="main-card">
+            <!-- Guía de pasos -->
+            <div class="guide-section" id="guideSection">
+                <div class="guide-title">📋 Cómo usarlo</div>
+                <div class="guide-steps" id="guideSteps"></div>
+            </div>
+
+            <div class="formula-section">
+                <div>
+                    <p class="formula-label">Fórmula</p>
+                    <p class="formula-text" id="formula">p = mv</p>
+                </div>
+                <div class="formula-icon emerald">
+                    <i data-lucide="target"></i>
+                </div>
+            </div>
+
+            <!-- Secciones de inputs -->
+            <div id="inputs"></div>
+            <div class="button-group">
+                <button class="btn btn-primary emerald" onclick="calculate()"><i data-lucide="calculator"></i>Calcular</button>
+                <button class="btn btn-secondary" onclick="clearAll()"><i data-lucide="x"></i>Limpiar</button>
+            </div>
+        </div>
+        <div id="results" class="results-card hidden"></div>
+    </div>
+    <script src="../cordova.js"></script>
+    <script src="../js/controllers/calculator-momentum.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

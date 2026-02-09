@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energía y Trabajo</title>
+    <link rel="stylesheet" href="../css/calculator-shared.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <button class="icon-btn" onclick="goBack()"><i data-lucide="chevron-left"></i></button>
+            <h1 class="title">Energía y Trabajo</h1>
+        </header>
+        <div class="tabs">
+            <button class="tab active" onclick="setMode('kinetic')">Cinética</button>
+            <button class="tab" onclick="setMode('potential')">Potencial</button>
+            <button class="tab" onclick="setMode('work')">Trabajo</button>
+        </div>
+        <div class="main-card">
+            <!-- Guía de pasos -->
+            <div class="guide-section" id="guideSection">
+                <div class="guide-title">📋 Cómo usarlo</div>
+                <div class="guide-steps" id="guideSteps"></div>
+            </div>
+
+            <div class="formula-section">
+                <div>
+                    <p class="formula-label">Fórmula</p>
+                    <p class="formula-text" id="formula">Ec = ½mv²</p>
+                </div>
+                <div class="formula-icon yellow">
+                    <i data-lucide="zap"></i>
+                </div>
+            </div>
+
+            <!-- Selector de gravedad -->
+            <div id="gravitySelector" class="hidden">
+                <div class="section-title">🌍 Selecciona el planeta</div>
+                <p class="section-help">La gravedad varía según la ubicación</p>
+                <select id="gravitySelect" onchange="changeGravity()" style="width:100%; padding:12px 16px; border:2px solid #e0e7ff; border-radius:12px; background:white; font-size:14px; cursor:pointer; font-weight:500; transition: border 0.2s;">
+                    <option value="9.81">🌎 Tierra (9.81 m/s²)</option>
+                    <option value="1.62">🌙 Luna (1.62 m/s²)</option>
+                    <option value="3.71">🔴 Marte (3.71 m/s²)</option>
+                </select>
+            </div>
+
+            <!-- Secciones de inputs -->
+            <div id="inputs"></div>
+            <div class="button-group">
+                <button class="btn btn-primary yellow" onclick="calculate()"><i data-lucide="calculator"></i>Calcular</button>
+                <button class="btn btn-secondary" onclick="clearAll()"><i data-lucide="x"></i>Limpiar</button>
+            </div>
+        </div>
+        <div id="results" class="results-card hidden"></div>
+    </div>
+    <script src="../cordova.js"></script>
+    <script src="../js/controllers/calculator-energy.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

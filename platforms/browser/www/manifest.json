@@ -1,0 +1,18 @@
+{
+  "background_color": "#FFF",
+  "display": "standalone",
+  "name": "Fisica ESPE",
+  "short_name": "Fisica ESPE",
+  "version": "com.teamespe.fisica",
+  "description": "Aplicación oficial de aprendizaje de Física del Team ESPE.",
+  "author": "Erick Maigua - Team ESPE",
+  "icons": [
+    {
+      "src": "res/icon.png",
+      "type": "image/png",
+      "sizes": "undefinedxundefined"
+    }
+  ],
+  "orientation": "portrait",
+  "start_url": "index.html"
+}

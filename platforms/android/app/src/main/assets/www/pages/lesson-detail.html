@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lección | Física App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="../css/learning-path.css">
+    <link rel="stylesheet" href="../css/lesson.css">
+<script src="../cordova.js"></script>
+<script src="../js/config/constants.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="has-background-light">
+    <div class="container-mobile">
+        <header class="lesson-header px-5 pt-5">
+            <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
+                <button class="back-btn-circle" onclick="LessonDetailController.salir()">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                <div class="progress-container-alt">
+                    <div id="lessonProgressBar" class="progress-bar-fill" style="width: 0%"></div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="font-size: 13px;">❤️ <span id="livesCount">5</span></span>
+                    <span style="font-size: 13px;">⚡ <span id="energyCount">5</span></span>
+                    <span id="stepCounter" class="has-text-grey is-size-7">1/5</span>
+                </div>
+            </div>
+        </header>
+
+        <main id="lessonContent" class="px-5 py-4">
+            <div class="loader-container is-flex is-justify-content-center py-6">
+                <div class="loader is-loading"></div>
+            </div>
+        </main>
+
+        <footer id="lessonFooter" class="px-5 pb-6 is-hidden">
+            <button class="button is-indigo is-fullwidth is-large is-rounded shadow-lg" onclick="LessonDetailController.siguiente()">
+                Continuar <i data-lucide="arrow-right" class="ml-2"></i>
+            </button>
+        </footer>
+    </div>
+
+    <script src="../js/utils/Storage.js"></script>
+    <script src="../js/utils/Cache.js"></script>
+    <script src="../js/services/api.js"></script>
+    <script src="../js/data/lessonContent.js"></script>
+    <script src="../js/controllers/LessonDetailController.js"></script>
+</body>
+</html>

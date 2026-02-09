@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Menú | Física App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bulma -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/variables.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+</head>
+
+<body class="menu-bg">
+
+<div class="menu-wrapper">
+
+    <!-- HEADER -->
+    <div class="menu-header">
+        <div class="menu-logo">
+            ⚛️
+        </div>
+        <h1 id="welcomeText">¡Hola!</h1>
+        <p id="nivelText" style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Nivel 1</p>
+        <p>¿Qué te gustaría hacer hoy?</p>
+        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 8px; flex-wrap: wrap;">
+            <span id="xpText" style="font-size: 13px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 12px;">0 XP</span>
+            <span id="vidasText" style="font-size: 13px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 12px;">❤️ 5</span>
+            <span id="energiaText" style="font-size: 13px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 12px;">⚡ 5</span>
+        </div>
+    </div>
+
+    <!-- OPTIONS -->
+    <div class="menu-options">
+
+        <button class="menu-card indigo" onclick="MenuController.goLearning()">
+            <div class="card-top">
+                <div class="icon">📘</div>
+                <div>
+                    <h2>Aprender Física</h2>
+                    <p>Lecciones interactivas y ejercicios paso a paso</p>
+                </div>
+            </div>
+            <span class="action">Comenzar →</span>
+        </button>
+
+        <button class="menu-card purple" onclick="MenuController.goCalculators()">
+            <div class="card-top">
+                <div class="icon">🧮</div>
+                <div>
+                    <h2>Calculadoras</h2>
+                    <p>Herramientas para resolver problemas de física</p>
+                </div>
+            </div>
+            <span class="action">Comenzar →</span>
+        </button>
+
+        <button class="menu-card pink" onclick="MenuController.goProfile()">
+            <div class="card-top">
+                <div class="icon">👤</div>
+                <div>
+                    <h2>Mi Perfil</h2>
+                    <p>Progreso, logros y estadísticas</p>
+                </div>
+            </div>
+            <span class="action">Comenzar →</span>
+        </button>
+
+    </div>
+
+</div>
+
+<!-- JS -->
+<script src="../cordova.js"></script>
+<script src="../js/config/constants.js"></script>
+<script src="../js/utils/Storage.js"></script>
+<script src="../js/controllers/MenuController.js"></script>
+
+</body>
+</html>

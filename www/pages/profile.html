@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mi Perfil | Física App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+
+    <link rel="stylesheet" href="../css/profile.css">
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="profile-bg">
+
+<div class="container is-max-desktop p-4">
+
+    <header class="profile-header">
+        <button class="icon-btn" onclick="history.back()" title="Regresar">
+            <i data-lucide="arrow-left"></i>
+        </button>
+        <h1>Mi Perfil</h1>
+        <button class="icon-btn logout" onclick="ProfileController.logout()" title="Cerrar Sesión">
+            <i data-lucide="log-out"></i>
+        </button>
+    </header>
+
+    <section class="profile-card glass">
+        <div class="avatar">👤</div>
+        <h2 id="userName">Cargando...</h2>
+        <p class="subtitle">Estudiante de Física</p>
+
+        <div class="level-box glass-soft">
+            <span id="userLevelDisplay" class="level">Nivel 3</span>
+            <div class="progress-wrapper">
+                <div id="progressFill" class="progress-bar"></div>
+            </div>
+            <small id="xpStatusText">450 / 750 XP hasta el Nivel 4</small>
+        </div>
+    </section>
+
+    <section class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-icon orange">🔥</span>
+            <p class="stat-title">Racha actual</p>
+            <strong>0 días</strong>
+        </div>
+
+        <div class="stat-card">
+            <span class="stat-icon yellow">🏆</span>
+            <p class="stat-title">Lecciones</p>
+            <strong>0</strong>
+        </div>
+
+        <div class="stat-card">
+            <span class="stat-icon green">🎯</span>
+            <p class="stat-title">Precisión</p>
+            <strong>0%</strong>
+        </div>
+
+        <div class="stat-card">
+            <span class="stat-icon blue">📈</span>
+            <p class="stat-title">XP Total</p>
+            <strong>0</strong>
+        </div>
+    </section>
+
+    <section class="achievements">
+        <h3>🏅 Logros</h3>
+        </section>
+
+</div>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script src="../cordova.js"></script>
+    <script src="../js/config/constants.js"></script>
+    <script src="../js/utils/Storage.js"></script>
+    <script src="../js/utils/Cache.js"></script>
+    <script src="../js/services/api.js"></script>
+    <script src="../js/services/ContentService.js"></script>
+
+    <script src="../js/controllers/ProfileController.js"></script>
+
+    <script>
+        // Inicialización de iconos Lucide al cargar el DOM
+        document.addEventListener("DOMContentLoaded", () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
+    </script>
+</body>
+</html>

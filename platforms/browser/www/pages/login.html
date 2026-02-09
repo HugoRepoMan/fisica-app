@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Física App | Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="../css/login.css">
+    <style>
+        /* Regla necesaria para ocultar formularios */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="login-bg">
+<div class="login-wrapper">
+    <div class="login-header">
+        <div class="login-logo">⚛️</div>
+        <h1>Física App</h1>
+        <p>Aprende física de forma divertida</p>
+    </div>
+
+    <div class="login-card">
+        <div class="login-tabs">
+            <button id="tabLogin" class="tab active" onclick="window.toggleAuthView('login')">Iniciar sesión</button>
+            <button id="tabRegister" class="tab" onclick="window.toggleAuthView('register')">Registrarse</button>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <form id="loginForm">
+            <div class="field">
+                <label>Correo electrónico</label>
+                <div class="input-icon">
+                    <span>📧</span>
+                    <input id="loginEmail" type="email" placeholder="tu@email.com" required>
+                </div>
+            </div>
+            <div class="field">
+                <label>Contraseña</label>
+                <div class="input-icon">
+                    <span>🔒</span>
+                    <input id="loginPassword" type="password" placeholder="••••••••" required>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary">Iniciar sesión</button>
+        </form>
+
+        <form id="registerForm" class="hidden">
+            <div class="field">
+                <label>Nombre completo</label>
+                <div class="input-icon">
+                    <span>👤</span>
+                    <input id="registerName" type="text" placeholder="Tu nombre">
+                </div>
+            </div>
+            <div class="field">
+                <label>Correo electrónico</label>
+                <div class="input-icon">
+                    <span>📧</span>
+                    <input id="registerEmail" type="email" placeholder="tu@email.com">
+                </div>
+            </div>
+            <div class="field">
+                <label>Contraseña</label>
+                <div class="input-icon">
+                    <span>🔒</span>
+                    <input id="registerPassword" type="password" placeholder="••••••••">
+                </div>
+            </div>
+            <button type="submit" class="btn-primary">Crear cuenta</button>
+        </form>
+
+        <p class="forgot" id="forgotPass">¿Olvidaste tu contraseña?</p>
+    </div>
+    <p class="terms">Al continuar, aceptas nuestros términos y condiciones</p>
+</div>
+
+<script src="../cordova.js"></script>
+<script src="../js/config/constants.js"></script>
+<script src="../js/utils/Storage.js"></script>
+<script src="../js/services/UserService.js"></script>
+<script src="../js/controllers/UIController.js"></script>
+<script src="../js/controllers/AuthController.js"></script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Registrarse | Física App</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <!-- Bulma (solo utilidades) -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+
+        <!-- Tu CSS -->
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/main.css">
+        <link rel="stylesheet" href="../css/components.css">
+    </head>
+
+    <body class="auth-bg">
+
+    <div class="auth-wrapper">
+
+        <!-- HEADER -->
+        <div class="auth-header">
+            <div class="logo-circle">
+                <img src="../img/logo.png" alt="Logo">
+            </div>
+            <h1>Física App</h1>
+            <p>Aprende física de forma divertida</p>
+        </div>
+
+        <!-- CARD -->
+        <div class="auth-card">
+
+            <!-- TABS -->
+            <div class="auth-tabs">
+                <button class="tab" onclick="UIController.goLogin()">Iniciar sesión</button>
+                <button class="tab active">Registrarse</button>
+            </div>
+
+            <!-- ALERTAS -->
+            <div id="alertContainer"></div>
+
+            <!-- FORM -->
+            <form id="registerForm">
+
+                <div class="field">
+                    <label>Nombre completo</label>
+                    <div class="input-icon">
+                        <span>👤</span>
+                        <input type="text" id="registerName" placeholder="Tu nombre completo" required>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Correo electrónico</label>
+                    <div class="input-icon">
+                        <span>@</span>
+                        <input type="email" id="registerEmail" placeholder="tu@email.com" required>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Contraseña</label>
+                    <div class="input-icon">
+                        <span>🔒</span>
+                        <input type="password" id="registerPassword" placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <button class="btn-primary" type="submit">
+                    Crear cuenta
+                </button>
+
+            </form>
+
+        </div>
+
+        <p class="terms">
+            Al continuar, aceptas nuestros términos y condiciones
+        </p>
+
+    </div>
+
+    <!-- JS -->
+    <script src="../cordova.js"></script>
+    <script src="../js/config/constants.js"></script>
+    <script src="../js/utils/Storage.js"></script>
+    <script src="../js/utils/validators.js"></script>
+    <script src="../js/services/UserService.js"></script>
+    <script src="../js/controllers/UIController.js"></script>
+    <script src="../js/controllers/AuthController.js"></script>
+
+    </body>
+    </html>

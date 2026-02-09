@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuerzas y Dinámica</title>
+    <link rel="stylesheet" href="../css/calculator-unified.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <button class="btn-back" onclick="goBack()">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="header-content">
+                <h1 class="title">Fuerzas y Dinámica</h1>
+                <p class="subtitle">Calculadora Unificada</p>
+            </div>
+            <button class="btn-config" onclick="toggleConfig()">
+                <i data-lucide="settings"></i>
+            </button>
+        </header>
+
+        <div id="configPanel" class="config-panel hidden">
+            <div class="config-card">
+                <div class="config-header">
+                    <i data-lucide="sliders"></i>
+                    <h3>Configuración del Sistema</h3>
+                </div>
+
+                <div class="config-section">
+                    <label class="config-label">Tipo de Plano</label>
+                    <div class="btn-group">
+                        <button class="tab-btn active" data-plane="horizontal" onclick="setPlaneType('horizontal')">
+                            <i data-lucide="minus"></i>
+                            <span>Horizontal</span>
+                        </button>
+                        <button class="tab-btn" data-plane="inclined" onclick="setPlaneType('inclined')">
+                            <i data-lucide="trending-up"></i>
+                            <span>Inclinado</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <label class="toggle-container">
+                        <input type="checkbox" id="frictionCheck" onchange="toggleFriction()">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Incluir Rozamiento/Fricción</span>
+                    </label>
+                </div>
+
+                <div class="config-section">
+                    <label class="config-label">Dirección del Movimiento</label>
+                    <div class="btn-group">
+                        <button class="tab-btn active" data-direction="horizontal" onclick="setDirection('horizontal')">
+                            <i data-lucide="arrow-right"></i>
+                            <span>Horizontal</span>
+                        </button>
+                        <button class="tab-btn hidden" data-direction="up" onclick="setDirection('up')">
+                            <i data-lucide="arrow-up-right"></i>
+                            <span>Subida</span>
+                        </button>
+                        <button class="tab-btn hidden" data-direction="down" onclick="setDirection('down')">
+                            <i data-lucide="arrow-down-right"></i>
+                            <span>Bajada</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-item">
+                <i data-lucide="layers"></i>
+                <span>Plano: <strong id="summaryPlane">Horizontal</strong></span>
+            </div>
+            <div class="summary-item">
+                <i data-lucide="zap"></i>
+                <span>Rozamiento: <strong id="summaryFriction">No</strong></span>
+            </div>
+            <div class="summary-item">
+                <i data-lucide="navigation"></i>
+                <span>Dirección: <strong id="summaryDirection">Horizontal</strong></span>
+            </div>
+        </div>
+
+        <div class="main-card">
+            <div class="formula-section">
+                <div class="formula-info">
+                    <span class="formula-badge">Segunda Ley de Newton</span>
+                    <p class="formula-text">ΣF = m × a</p>
+                </div>
+                <div class="formula-icon">
+                    <svg width="40" height="40" viewBox="0 0 40 40">
+                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" 
+                              font-size="28" font-weight="bold" fill="#4f46e5">Σ</text>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="inputs-grid">
+                <div class="input-wrapper">
+                    <label class="input-label">
+                        <i data-lucide="package"></i>
+                        Masa del objeto
+                    </label>
+                    <div class="input-with-unit">
+                        <input type="number" id="massInput" class="input-field" 
+                               placeholder="10" step="0.01" min="0">
+                        <span class="unit">kg</span>
+                    </div>
+                    <span class="error-message" id="massError"></span>
+                </div>
+
+                <div class="input-wrapper hidden" id="angleGroup">
+                    <label class="input-label">
+                        <i data-lucide="rotate-cw"></i>
+                        Ángulo del plano
+                    </label>
+                    <div class="input-with-unit">
+                        <input type="number" id="angleInput" class="input-field" 
+                               placeholder="30" value="30" step="1" min="0" max="89">
+                        <span class="unit">°</span>
+                    </div>
+                    <span class="error-message" id="angleError"></span>
+                </div>
+
+                <div class="input-wrapper hidden" id="coefficientGroup">
+                    <label class="input-label">
+                        <i data-lucide="grip-horizontal"></i>
+                        Coeficiente de rozamiento
+                    </label>
+                    <div class="input-with-unit">
+                        <input type="number" id="coefficientInput" class="input-field" 
+                               placeholder="0.3" value="0.3" step="0.01" min="0" max="1">
+                        <span class="unit">μ</span>
+                    </div>
+                    <span class="error-message" id="coefficientError"></span>
+                </div>
+
+                <div class="input-wrapper">
+                    <label class="input-label">
+                        <i data-lucide="move"></i>
+                        Fuerza aplicada
+                    </label>
+                    <div class="input-with-unit">
+                        <input type="number" id="forceInput" class="input-field" 
+                               placeholder="50" step="0.01" min="0">
+                        <span class="unit">N</span>
+                    </div>
+                    <span class="error-message" id="forceError"></span>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="calculate()">
+                    <i data-lucide="calculator"></i>
+                    <span>Calcular</span>
+                </button>
+                <button class="btn btn-secondary" onclick="clearInputs()">
+                    <i data-lucide="rotate-ccw"></i>
+                    <span>Limpiar</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="resultsCard" class="results-card hidden">
+            <div class="results-header">
+                <i data-lucide="check-circle"></i>
+                <h3>Resultados del Cálculo</h3>
+            </div>
+            
+            <div class="results-grid">
+                <div class="result-item">
+                    <div class="result-icon red">
+                        <i data-lucide="arrow-down"></i>
+                    </div>
+                    <div class="result-content">
+                        <span class="result-label">Peso (W)</span>
+                        <span class="result-value" id="resultWeight">-</span>
+                    </div>
+                </div>
+
+                <div class="result-item hidden" id="resultWeightParallelItem">
+                    <div class="result-icon orange">
+                        <i data-lucide="trending-down"></i>
+                    </div>
+                    <div class="result-content">
+                        <span class="result-label">Peso Paralelo (W∥)</span>
+                        <span class="result-value" id="resultWeightParallel">-</span>
+                    </div>
+                </div>
+
+                <div class="result-item hidden" id="resultWeightPerpendicularItem">
+                    <div class="result-icon orange">
+                        <i data-lucide="corner-down-right"></i>
+                    </div>
+                    <div class="result-content">
+                        <span class="result-label">Peso Perpendicular (W⊥)</span>
+                        <span class="result-value" id="resultWeightPerpendicular">-</span>
+                    </div>
+                </div>
+
+                <div class="result-item">
+                    <div class="result-icon blue">
+                        <i data-lucide="arrow-up"></i>
+                    </div>
+                    <div class="result-content">
+                        <span class="result-label">Fuerza Normal (N)</span>
+                        <span class="result-value" id="resultNormal">-</span>
+                    </div>
+                </div>
+
+                <div class="result-item hidden" id="resultFrictionItem">
+                    <div class="result-icon yellow">
+                        <i data-lucide="arrow-left"></i>
+                    </div>
+                    <div class="result-content">
+                        <span class="result-label">Fuerza de Fricción (Fr)</span>
+                        <span class="result-value" id="resultFriction">-</span>
+                    </div>
+                </div>
+
+                <div class="result-item highlight">
+                    <div class="result-icon indigo">
+                        <i data-lucide="zap"></i>
+                    </div>
+                    <div class="result-content">
+                        <span class="result-label">Fuerza Neta (ΣF)</span>
+                        <span class="result-value" id="resultNetForce">-</span>
+                    </div>
+                </div>
+
+                <div class="result-item highlight">
+                    <div class="result-icon green">
+                        <i data-lucide="gauge"></i>
+                    </div>
+                    <div class="result-content">
+                        <span class="result-label">Aceleración (a)</span>
+                        <span class="result-value" id="resultAcceleration">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-diagram" onclick="showDiagram()">
+                <i data-lucide="network"></i>
+                <span>Ver Diagrama de Cuerpo Libre</span>
+            </button>
+        </div>
+
+        <div id="diagramModal" class="modal hidden" onclick="closeDiagram()">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3>
+                        <i data-lucide="network"></i>
+                        Diagrama de Cuerpo Libre
+                    </h3>
+                    <button class="modal-close" onclick="closeDiagram()">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <canvas id="diagramCanvas" width="700" height="700"></canvas>
+                </div>
+                <div class="modal-footer">
+                    <div class="legend">
+                        <div class="legend-item"><span class="legend-color red"></span>Peso</div>
+                        <div class="legend-item"><span class="legend-color blue"></span>Normal</div>
+                        <div class="legend-item"><span class="legend-color green"></span>Aplicada</div>
+                        <div class="legend-item"><span class="legend-color orange"></span>Fricción</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../cordova.js"></script>
+    <script src="../js/controllers/calculator-unified.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
