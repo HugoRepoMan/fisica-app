@@ -281,6 +281,6 @@ module.exports = {
     sanitizeString,
     validateRegistrationData,
     validateLoginData,
-    validateCalculatorInput
+    validateCalculatorInput,
     validateLessonCompletion,
 };
