@@ -22,99 +22,155 @@ exports.restarVida = async (req, res) => {
 
 exports.completarLeccion = async (req, res) => {
     const userId = req.usuario.id;
-    const { puntaje, total_preguntas, xp } = req.body; 
+    const {
+        puntaje,
+        total_preguntas,
+        moduloId, // opcional
+        xp, // opcional - enviado por frontend
+        racha: rachaCliente, // opcional - no confiar
+        ultima_leccion_fecha: ultimaLeccionCliente, // opcional - string YYYY-MM-DD
+        energia: energiaCliente, // opcional - valor local después de descontar costo
+        energia_costo // opcional - default 1
+    } = req.body;
 
     try {
-        // A. CÁLCULOS (si el frontend envía `xp` lo usamos; si no, lo calculamos aquí)
+        // ---------- A. OBTENER DATOS ACTUALES DEL USUARIO ----------
+        const [rows] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia, racha, fecha_ultima_leccion FROM usuarios WHERE id = ?', [userId]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+        const user = rows[0];
+
+        // ---------- B. ENERGÍA: sincronizar o descontar ----------
+        let nuevaEnergia;
+        if (energiaCliente !== undefined && energiaCliente !== null) {
+            const eNum = Number(energiaCliente);
+            nuevaEnergia = isNaN(eNum) ? user.energia : Math.max(0, Math.floor(eNum));
+        } else {
+            const costo = energia_costo !== undefined ? Number(energia_costo) : 1;
+            const costoVal = isNaN(costo) ? 1 : Math.max(0, Math.floor(costo));
+            nuevaEnergia = Math.max(0, (user.energia || 0) - costoVal);
+        }
+
+        // ---------- C. XP: usar valor del frontend o calcular en servidor ----------
         let xpGanada;
         if (xp !== undefined && xp !== null) {
             const xpNum = Number(xp);
-            if (!isNaN(xpNum) && xpNum >= 0) {
-                xpGanada = Math.round(xpNum);
-            }
+            if (!isNaN(xpNum) && xpNum >= 0) xpGanada = Math.round(xpNum);
         }
 
         if (xpGanada === undefined) {
             const XP_BASE = 20;
-            const bono = Math.round((puntaje / total_preguntas) * 10);
+            const bono = (total_preguntas ? Math.round((puntaje / total_preguntas) * 10) : 0);
             xpGanada = XP_BASE + bono;
         }
 
-        // B. ACTUALIZAR ESTADÍSTICAS + COBRAR ENERGÍA
+        // ---------- D. VALIDAR XP según modulo (para evitar fraude) ----------
+        if (moduloId) {
+            try {
+                const [mods] = await db.query('SELECT xp FROM modulos WHERE id = ?', [moduloId]);
+                if (mods && mods.length > 0) {
+                    const baseXp = Number(mods[0].xp) || 0;
+                    const maxAllowed = Math.max(baseXp * 3, baseXp + 50); // tolerancia razonable
+                    if (xpGanada > maxAllowed) {
+                        console.warn(`XP enviado excesivo por user ${userId}: ${xpGanada} > ${maxAllowed} (modulo ${moduloId}). Se ajusta.`);
+                        xpGanada = maxAllowed;
+                    }
+                }
+            } catch (err) {
+                console.error('Error validando módulo XP', err);
+            }
+        }
+
+        // ---------- E. ACTUALIZAR ESTADÍSTICAS (XP, lecciones, aciertos/intentos, energia) ----------
         await db.query(`
-            UPDATE usuarios 
+            UPDATE usuarios
             SET xp_actual = xp_actual + ?,
                 lecciones_completadas = lecciones_completadas + 1,
                 total_aciertos = total_aciertos + ?,
                 total_intentos = total_intentos + ?,
-                energia = GREATEST(0, energia - 2) 
+                energia = ?
             WHERE id = ?
-        `, [xpGanada, puntaje, total_preguntas, userId]);
+        `, [xpGanada, puntaje || 0, total_preguntas || 0, nuevaEnergia, userId]);
 
-        // C. REVISAR NIVEL (LEVEL UP)
-        const [users] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia, racha, fecha_ultima_leccion FROM usuarios WHERE id = ?', [userId]);
-        const user = users[0];
-        
-        let nuevoNivel = user.nivel;
-        const nivelCalculado = Math.floor(user.xp_actual / 200) + 1;
-        let subioNivel = false;
+        // Reobtener usuario actualizado para valores consistentes
+        const [updatedRows] = await db.query('SELECT xp_actual, nivel, lecciones_completadas, energia, racha, fecha_ultima_leccion FROM usuarios WHERE id = ?', [userId]);
+        const updatedUser = updatedRows[0];
 
-        if (nivelCalculado > user.nivel) {
+        // ---------- F. NIVEL: recalcular con nuevo XP ----------
+        const nuevoTotalXp = Number(updatedUser.xp_actual) || 0;
+        const nivelCalculado = Math.floor(nuevoTotalXp / 200) + 1;
+        let nuevoNivel = updatedUser.nivel;
+        if (nivelCalculado > updatedUser.nivel) {
             nuevoNivel = nivelCalculado;
-            subioNivel = true;
             await db.query('UPDATE usuarios SET nivel = ? WHERE id = ?', [nuevoNivel, userId]);
         }
 
-        // D. ACTUALIZAR RACHA (STREAK)
+        // ---------- G. RACHA: recalcular de forma segura (no confiar ciegamente en cliente) ----------
         const hoy = new Date();
         const fechaHoyStr = hoy.toISOString().split('T')[0]; // YYYY-MM-DD
-        const fechaUltimaLeccionStr = user.fecha_ultima_leccion 
-            ? new Date(user.fecha_ultima_leccion).toISOString().split('T')[0]
-            : null;
 
-        let nuevaRacha = user.racha || 0;
+        // Determinar la última fecha registrada (DB) y la fecha enviada por cliente (opcional)
+        const fechaUltimaDbStr = updatedUser.fecha_ultima_leccion ? new Date(updatedUser.fecha_ultima_leccion).toISOString().split('T')[0] : null;
+        let fechaReferenciaStr = fechaUltimaDbStr;
 
-        if (fechaUltimaLeccionStr === null) {
-            // Primera lección de este usuario
-            nuevaRacha = 1;
-        } else if (fechaUltimaLeccionStr === fechaHoyStr) {
-            // Ya completó una lección hoy (no incrementa racha)
-            nuevaRacha = user.racha || 1;
-        } else {
-            // Comparar fechas
-            const fechaUltima = new Date(fechaUltimaLeccionStr);
-            const diferenciaDias = Math.floor((hoy - fechaUltima) / (1000 * 60 * 60 * 24));
-
-            if (diferenciaDias === 1) {
-                // Completó ayer, hoy sigue la racha
-                nuevaRacha = (user.racha || 1) + 1;
-            } else if (diferenciaDias > 1) {
-                // Pasaron más de 1 día sin completar lecciones - resetear racha
-                nuevaRacha = 1;
+        if (ultimaLeccionCliente) {
+            const cDate = new Date(ultimaLeccionCliente);
+            if (!isNaN(cDate)) {
+                const cStr = cDate.toISOString().split('T')[0];
+                // No aceptar fechas futuras
+                if (cStr <= fechaHoyStr) {
+                    // Si cliente reporta una fecha más reciente que DB, la consideramos como referencia
+                    if (!fechaReferenciaStr || cStr > fechaReferenciaStr) fechaReferenciaStr = cStr;
+                }
             }
         }
 
-        // Guardar la nueva racha y fecha de última lección
-        await db.query(
-            'UPDATE usuarios SET racha = ?, fecha_ultima_leccion = ? WHERE id = ?',
-            [nuevaRacha, fechaHoyStr, userId]
-        );
+        let nuevaRacha = updatedUser.racha || 0;
 
-        // D. LOGROS (tu código aquí si lo tienes)
+        if (!fechaReferenciaStr) {
+            // No hay registro previo -> inicio de racha
+            nuevaRacha = 1;
+        } else if (fechaReferenciaStr === fechaHoyStr) {
+            // Ya completó hoy antes de esta petición
+            nuevaRacha = updatedUser.racha || 1;
+        } else {
+            const fechaReferencia = new Date(fechaReferenciaStr);
+            const diferenciaMs = (new Date(fechaHoyStr) - fechaReferencia);
+            const diferenciaDias = Math.floor(diferenciaMs / (1000 * 60 * 60 * 24));
 
-        // E. RESPUESTA
+            if (diferenciaDias === 1) {
+                nuevaRacha = (updatedUser.racha || 0) + 1;
+            } else if (diferenciaDias > 1) {
+                nuevaRacha = 1;
+            } else {
+                // diferenciaDias <= 0 fuera de los casos anteriores
+                nuevaRacha = updatedUser.racha || 1;
+            }
+        }
+
+        // Fecha a guardar: preferir la fecha cliente si es válida y <= hoy, sino usar hoy
+        let fechaParaGuardar = fechaHoyStr;
+        if (ultimaLeccionCliente) {
+            const cDate2 = new Date(ultimaLeccionCliente);
+            if (!isNaN(cDate2)) {
+                const cStr2 = cDate2.toISOString().split('T')[0];
+                if (cStr2 <= fechaHoyStr) fechaParaGuardar = cStr2;
+            }
+        }
+
+        await db.query('UPDATE usuarios SET racha = ?, fecha_ultima_leccion = ? WHERE id = ?', [nuevaRacha, fechaParaGuardar, userId]);
+
+        // ---------- H. RESPUESTA - devolver resumen con claves solicitadas ----------
         res.json({
-            msg: "¡Lección completada!",
             resumen: {
-                xp_ganada: xpGanada,
-                nuevo_total_xp: user.xp_actual,
-                nueva_energia: user.energia,
-                subio_nivel: subioNivel,
+                nuevo_total_xp: nuevoTotalXp,
+                nueva_energia: Number(nuevaEnergia),
                 nuevo_nivel: nuevoNivel,
-                lecciones_completadas: user.lecciones_completadas,
-                racha: nuevaRacha
+                lecciones_completadas: Number(updatedUser.lecciones_completadas || 0),
+                nueva_racha: nuevaRacha
             }
         });
+
+        // (Lógica antigua removida — usamos la nueva respuesta arriba)
 
     } catch (error) {
         console.error(error);
