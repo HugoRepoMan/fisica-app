@@ -219,13 +219,13 @@ window.ProfileController = {
         if (!todosLosLogros || todosLosLogros.length === 0) {
             console.log("⚠️ Usando logros por defecto");
             todosLosLogros = [
-                { id: 1, emoji: '🎓', titulo: 'Primer Paso', descripcion: 'Completaste tu primera lección' },
-                { id: 2, emoji: '📚', titulo: 'Estudiante Dedicado', descripcion: 'Completa 5 lecciones' },
-                { id: 3, emoji: '🍎', titulo: 'Maestro Newton', descripcion: 'Domina las leyes de Newton' },
-                { id: 4, emoji: '🔥', titulo: 'Racha de Fuego', descripcion: '7 días consecutivos' },
-                { id: 5, emoji: '🧮', titulo: 'Calculador Pro', descripcion: '50 cálculos correctos' },
-                { id: 6, emoji: '🧠', titulo: 'Genio de la Física', descripcion: '95% de precisión' },
-                { id: 7, emoji: '⭐', titulo: 'Estrella Brillante', descripcion: 'Alcanza el nivel 10' }
+                { id: 1, icono: '🎯', titulo: 'Primer Paso', descripcion: 'Completa tu primera lección' },
+                { id: 2, icono: '📚', titulo: 'Estudiante Dedicado', descripcion: 'Alcanza nivel 5' },
+                { id: 3, icono: '🔬', titulo: 'Maestro de Newton', descripcion: 'Completa todas las lecciones de Newton' },
+                { id: 4, icono: '🔥', titulo: 'Racha de Fuego', descripcion: 'Mantén una racha de 7 días' },
+                { id: 5, icono: '🧮', titulo: 'Calculador Pro', descripcion: 'Realiza 50 cálculos' },
+                { id: 6, icono: '🧠', titulo: 'Genio de la Física', descripcion: '95% de precisión' },
+                { id: 7, icono: '⭐', titulo: 'Estrella Brillante', descripcion: 'Alcanza el nivel 10' }
             ];
         }
 
@@ -234,23 +234,24 @@ window.ProfileController = {
         if (title) container.appendChild(title);
 
         todosLosLogros.forEach(logro => {
-            // Verificar si el usuario tiene este logro (manejar ambos formatos)
             const logroId = logro.id || logro.logro_id;
-            const esCompletado = userLogros.includes(logroId) || 
+            // Check: backend uses desbloqueado field, local uses array of IDs
+            const esCompletado = logro.desbloqueado === 1 || logro.desbloqueado === true ||
+                                userLogros.includes(logroId) ||
                                 userLogros.some(l => l.id === logroId || l === logroId);
-            
+
             const div = document.createElement("div");
             div.className = `achievement ${esCompletado ? 'completed' : 'locked'}`;
-            
+
             div.innerHTML = `
-                <span class="emoji" style="font-size: 28px;">${logro.emoji || logro.icono || '🏆'}</span>
+                <span class="emoji" style="font-size: 28px;">${logro.icono || logro.emoji || '🏆'}</span>
                 <div style="flex: 1;">
                     <strong style="display: block; margin-bottom: 4px;">${logro.titulo || logro.title}</strong>
                     <p style="margin: 0; font-size: 13px; color: #64748b;">${logro.descripcion || logro.description || logro.desc}</p>
                 </div>
                 ${esCompletado ? '<span class="check" style="color: #10b981; font-size: 20px;">✔</span>' : ''}
             `;
-            
+
             container.appendChild(div);
         });
 

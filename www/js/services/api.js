@@ -3,7 +3,7 @@
 window.ApiService = {
 
     async request(method, endpoint, body = null) {
-        const token = localStorage.getItem(window.CONFIG.STORAGE_KEYS.TOKEN);
+        const token = window.Storage ? window.Storage.get(window.CONFIG.STORAGE_KEYS.TOKEN) : localStorage.getItem(window.CONFIG.STORAGE_KEYS.TOKEN);
 
         const controller = new AbortController();
         setTimeout(() => controller.abort(), window.CONFIG.FETCH_CONFIG.TIMEOUT);

@@ -77,6 +77,7 @@
 <script src="../cordova.js"></script>
 <script src="../js/config/constants.js"></script>
 <script src="../js/utils/Storage.js"></script>
+<script src="../js/utils/Cache.js"></script>
 <script src="../js/services/api.js"></script>
 <script src="../js/services/ContentService.js"></script>
 <script src="../js/data/lessonContent.js"></script>
@@ -92,8 +93,8 @@
         }
         
         // El controlador debe pintar los datos del Storage inmediatamente
-        if (window.LearningPathController && window.LearningPathController.renderHeader) {
-            window.LearningPathController.renderHeader();
+        if (window.LearningPathController && window.LearningPathController.renderHeaderFromLocalStorage) {
+            window.LearningPathController.renderHeaderFromLocalStorage();
         }
     });
 

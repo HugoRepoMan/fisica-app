@@ -73,31 +73,14 @@ window.LessonDetailController = {
 
     async procesarError() {
         try {
-            // Gestionar vidas LOCALMENTE (el endpoint /progreso/fallar da 403)
             const userData = window.Storage.get("user_data") || {};
             let vidas = userData.vidas !== undefined ? parseInt(userData.vidas) : 5;
 
-            if (vidas > 0) {
-                vidas--;
-                userData.vidas = vidas;
-                window.Storage.set("user_data", userData);
-                console.log(`💔 Vida restada localmente. Quedan: ${vidas}`);
-            }
-
-            this.actualizarVidasUI(vidas, userData.energia);
-
-            // Si se queda sin vidas, expulsar de la lección
-            if (vidas <= 0) {
-                alert("💔 Te has quedado sin vidas.\nNo puedes continuar esta lección.");
-                window.location.href = "learning-path.html";
-                return;
-            }
-
-            // Intentar sincronizar con backend (sin bloquear si falla)
+            // Intentar sincronizar con backend primero
             try {
                 const token = window.Storage.get("token");
                 if (token) {
-                    await fetch(`${window.CONFIG.API_URL}/progreso/fallar`, {
+                    const resp = await fetch(`${window.CONFIG.API_URL}/progreso/fallar`, {
                         method: "POST",
                         headers: {
                             "x-auth-token": token,
@@ -105,9 +88,36 @@ window.LessonDetailController = {
                         },
                         body: JSON.stringify({ moduloId: this.moduloId })
                     });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (data.vidas !== undefined) {
+                            vidas = parseInt(data.vidas);
+                            userData.vidas = vidas;
+                            window.Storage.set("user_data", userData);
+                            console.log(`💔 Vida sincronizada con backend. Quedan: ${vidas}`);
+                        }
+                    } else {
+                        throw new Error(`HTTP ${resp.status}`);
+                    }
+                } else {
+                    throw new Error("Sin token");
                 }
             } catch (e) {
-                console.warn("⚠️ No se pudo sincronizar vida con backend:", e.message);
+                console.warn("⚠️ Fallback local para vidas:", e.message);
+                if (vidas > 0) {
+                    vidas--;
+                    userData.vidas = vidas;
+                    window.Storage.set("user_data", userData);
+                    console.log(`💔 Vida restada localmente. Quedan: ${vidas}`);
+                }
+            }
+
+            this.actualizarVidasUI(vidas, userData.energia);
+
+            if (vidas <= 0) {
+                alert("💔 Te has quedado sin vidas.\nNo puedes continuar esta lección.");
+                window.location.href = "learning-path.html";
+                return;
             }
         } catch (error) {
             console.error("Error al procesar fallo:", error);
@@ -235,11 +245,12 @@ window.LessonDetailController = {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    puntaje: puntaje,
-                    total_preguntas: totalPreguntas,
-                    leccion_id: moduloId,
-                    moduloId: moduloId,
-                    xp: xpGanada
+                    puntaje: parseInt(puntaje),
+                    total_preguntas: parseInt(totalPreguntas),
+                    leccion_id: parseInt(moduloId),
+                    moduloId: parseInt(moduloId),
+                    modulo_id: parseInt(moduloId),
+                    xp: parseInt(xpGanada)
                 })
             });
 
@@ -280,7 +291,7 @@ window.LessonDetailController = {
             userData.xp = (parseInt(userData.xp) || 0) + xpGanada;
         }
 
-        // Nivel: calcular basado en XP (200 XP por nivel)
+        // Nivel: calcular basado en XP (100 XP por nivel)
         const xpPorNivel = 100;
         const nivelCalculado = Math.floor(userData.xp / xpPorNivel) + 1;
         const nivelAnterior = parseInt(userData.nivel) || 1;

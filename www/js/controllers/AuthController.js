@@ -201,7 +201,13 @@ function initAuth() {
                             racha: result.usuario.racha || 0,
                             vidas: result.usuario.vidas !== undefined ? result.usuario.vidas : 5,
                             energia: result.usuario.energia !== undefined ? result.usuario.energia : 5,
-                            logros: result.usuario.logros || []
+                            logros: result.usuario.logros || [],
+                            lecciones_completadas: result.usuario.lecciones_completadas || 0,
+                            total_aciertos: result.usuario.total_aciertos || 0,
+                            total_intentos: result.usuario.total_intentos || 0,
+                            precision: 0,
+                            ultima_regeneracion: Date.now(),
+                            ultima_leccion_fecha: result.usuario.ultima_leccion_fecha || null
                         });
                         
                         // Guardar userName por separado para fácil acceso
@@ -298,7 +304,13 @@ function initAuth() {
                                 racha: 0,
                                 vidas: result.usuario.vidas || 5,
                                 energia: result.usuario.energia || 5,
-                                logros: []
+                                logros: [],
+                                lecciones_completadas: 0,
+                                total_aciertos: 0,
+                                total_intentos: 0,
+                                precision: 0,
+                                ultima_regeneracion: Date.now(),
+                                ultima_leccion_fecha: null
                             });
                             
                             window.Storage.set("userName", result.usuario.nombre);
@@ -333,7 +345,13 @@ function initAuth() {
                                         racha: autoLogin.usuario.racha || 0,
                                         vidas: autoLogin.usuario.vidas !== undefined ? autoLogin.usuario.vidas : 5,
                                         energia: autoLogin.usuario.energia !== undefined ? autoLogin.usuario.energia : 5,
-                                        logros: autoLogin.usuario.logros || []
+                                        logros: autoLogin.usuario.logros || [],
+                                        lecciones_completadas: 0,
+                                        total_aciertos: 0,
+                                        total_intentos: 0,
+                                        precision: 0,
+                                        ultima_regeneracion: Date.now(),
+                                        ultima_leccion_fecha: null
                                     });
                                     
                                     window.Storage.set("userName", autoLogin.usuario.nombre);
