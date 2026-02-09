@@ -208,6 +208,68 @@ function validateCalculatorInput(data, requiredFields) {
 }
 
 // =====================================================
+// VALIDACIÓN DE PAYLOAD: COMPLETAR LECCIÓN
+// =====================================================
+function validateLessonCompletion(data) {
+    const errors = [];
+    const parsed = {};
+
+    // puntaje y total_preguntas
+    if (data.puntaje === undefined || data.total_preguntas === undefined) {
+        errors.push('puntaje y total_preguntas son requeridos');
+    } else {
+        const punt = Number(data.puntaje);
+        const total = Number(data.total_preguntas);
+        if (isNaN(punt) || punt < 0) errors.push('puntaje debe ser un número >= 0');
+        if (isNaN(total) || total <= 0) errors.push('total_preguntas debe ser un número > 0');
+        if (!isNaN(punt) && !isNaN(total) && punt > total) errors.push('puntaje no puede ser mayor que total_preguntas');
+        parsed.puntaje = isNaN(punt) ? null : Math.floor(punt);
+        parsed.total_preguntas = isNaN(total) ? null : Math.floor(total);
+    }
+
+    // xp (opcional)
+    if (data.xp !== undefined && data.xp !== null && data.xp !== '') {
+        const x = Number(data.xp);
+        if (isNaN(x) || x < 0) errors.push('xp debe ser un número >= 0');
+        else parsed.xp = Math.round(x);
+    }
+
+    // energia (opcional)
+    if (data.energia !== undefined && data.energia !== null && data.energia !== '') {
+        const e = Number(data.energia);
+        if (isNaN(e) || e < 0) errors.push('energia debe ser un número >= 0');
+        else parsed.energia = Math.max(0, Math.floor(e));
+    }
+
+    // energia_costo (opcional)
+    if (data.energia_costo !== undefined && data.energia_costo !== null && data.energia_costo !== '') {
+        const ec = Number(data.energia_costo);
+        if (isNaN(ec) || ec < 0) errors.push('energia_costo debe ser un número >= 0');
+        else parsed.energia_costo = Math.max(0, Math.floor(ec));
+    }
+
+    // ultima_leccion_fecha (opcional) - aceptar YYYY-MM-DD o ISO
+    if (data.ultima_leccion_fecha !== undefined && data.ultima_leccion_fecha !== null && data.ultima_leccion_fecha !== '') {
+        const d = new Date(data.ultima_leccion_fecha);
+        if (isNaN(d)) errors.push('ultima_leccion_fecha no es una fecha válida');
+        else parsed.ultima_leccion_fecha = d.toISOString().split('T')[0];
+    }
+
+    // moduloId (opcional)
+    if (data.moduloId !== undefined && data.moduloId !== null && data.moduloId !== '') {
+        const m = Number(data.moduloId);
+        if (isNaN(m) || m <= 0) errors.push('moduloId debe ser un entero positivo');
+        else parsed.moduloId = Math.floor(m);
+    }
+
+    return {
+        valid: errors.length === 0,
+        errors,
+        parsed
+    };
+}
+
+// =====================================================
 // EXPORTAR FUNCIONES
 // =====================================================
 module.exports = {
@@ -220,4 +282,5 @@ module.exports = {
     validateRegistrationData,
     validateLoginData,
     validateCalculatorInput
+    validateLessonCompletion,
 };
