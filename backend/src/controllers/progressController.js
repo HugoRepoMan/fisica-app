@@ -1,5 +1,6 @@
 // src/controllers/progressController.js
 const db = require('../config/db');  // ← CORREGIDO (era '../config/database')
+const { validateLessonCompletion } = require('../validators/inputValidators');
 
 exports.restarVida = async (req, res) => {
     const userId = req.usuario.id;
@@ -22,16 +23,22 @@ exports.restarVida = async (req, res) => {
 
 exports.completarLeccion = async (req, res) => {
     const userId = req.usuario.id;
-    const {
-        puntaje,
-        total_preguntas,
-        moduloId, // opcional
-        xp, // opcional - enviado por frontend
-        racha: rachaCliente, // opcional - no confiar
-        ultima_leccion_fecha: ultimaLeccionCliente, // opcional - string YYYY-MM-DD
-        energia: energiaCliente, // opcional - valor local después de descontar costo
-        energia_costo // opcional - default 1
-    } = req.body;
+    // Validar y normalizar payload
+    const validation = validateLessonCompletion(req.body || {});
+    if (!validation.valid) {
+        return res.status(400).json({ error: 'Payload inválido', details: validation.errors });
+    }
+
+    const parsed = validation.parsed;
+    const puntaje = parsed.puntaje;
+    const total_preguntas = parsed.total_preguntas;
+    const moduloId = parsed.moduloId;
+    const xp = parsed.xp;
+    const ultimaLeccionCliente = parsed.ultima_leccion_fecha;
+    const energiaCliente = parsed.energia;
+    const energia_costo = parsed.energia_costo;
+    // racha del cliente se puede leer pero no se confía ciegamente
+    const rachaCliente = req.body && req.body.racha;
 
     try {
         // ---------- A. OBTENER DATOS ACTUALES DEL USUARIO ----------
